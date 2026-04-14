@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title id="page-title">Souvenir</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+  <nav class="navbar">
+    <div class="nav-brand" id="nav-brand">✦ Souvenir</div>
+    <a href="login.html" class="btn-connect">Se connecter</a>
+  </nav>
+
+  <!-- HERO À LA UNE -->
+  <section class="hero">
+    <div class="hero-left">
+      <div class="hero-text">
+        <span class="hero-eyebrow" id="hero-eyebrow">Pour toi, rien que pour toi</span>
+        <h1 class="hero-title" id="hero-title">Des souvenirs<br/><em>gravés dans le cœur</em></h1>
+        <div class="hero-rule"></div>
+        <p class="hero-desc" id="hero-desc">Chaque instant partagé devient un trésor. Chaque photo, une lettre d'amour silencieuse.</p>
+        <p class="hero-quote-text" id="hero-quote">"L'amour ne se voit pas avec les yeux, mais avec le cœur."</p>
+      </div>
+    </div>
+    <div class="hero-right">
+      <div class="hero-img-frame">
+        <div class="hero-img-inner">
+          <img id="hero-image" src="https://images.unsplash.com/photo-1518199266791-5375a83190b7?w=900&q=80" alt="À la une" />
+        </div>
+        <div class="hero-img-label">✦ À la une</div>
+        <div class="frame-corner tl"></div>
+        <div class="frame-corner tr"></div>
+        <div class="frame-corner bl"></div>
+        <div class="frame-corner br"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- GALLERY -->
+  <section class="gallery-section">
+    <div class="section-header">
+      <div class="section-line"></div>
+      <h2 class="section-title">Nos moments</h2>
+      <div class="section-line"></div>
+    </div>
+    <p class="section-hint">Cliquez sur une photo pour découvrir son histoire</p>
+    <div class="gallery-grid" id="gallery-grid">
+      <div class="loading-state"><div class="loading-spinner"></div><p>Chargement...</p></div>
+    </div>
+  </section>
+
+  <!-- QUOTES -->
+  <section class="quotes-section">
+    <div class="quotes-deco">❧</div>
+    <blockquote class="main-quote" id="main-quote">Les plus beaux souvenirs sont ceux que l'on garde dans le cœur.</blockquote>
+    <p class="quote-author" id="quote-author">— Anonyme</p>
+    <div class="quote-dots" id="quote-dots"></div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="footer-brand">✦</div>
+    <p class="footer-msg" id="footer-msg">Fait avec amour, pour toi</p>
+    <p class="footer-copy">&copy; 2024 Souvenir</p>
+  </footer>
+
+  <!-- MODAL DÉTAIL -->
+  <div class="detail-overlay" id="detail-modal" onclick="closeDetailOnOverlay(event)">
+    <div class="detail-modal">
+      <button class="detail-close" onclick="closeDetail()">×</button>
+      <div class="detail-img-wrap">
+        <img id="detail-img" src="" alt="" />
+      </div>
+      <div class="detail-body">
+        <span class="detail-date" id="detail-date"></span>
+        <h2 class="detail-title" id="detail-title"></h2>
+        <p class="detail-text" id="detail-text"></p>
+      </div>
+    </div>
+  </div>
+
+  <script src="supabase-config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

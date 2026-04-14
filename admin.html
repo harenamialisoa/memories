@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin — Souvenir</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body class="admin-page">
+
+  <nav class="admin-nav">
+    <div class="nav-brand">✦ Souvenir <span class="admin-badge">Admin</span></div>
+    <div class="admin-nav-actions">
+      <a href="index.html" class="btn-outline" target="_blank">Voir le site</a>
+      <button class="btn-outline" onclick="handleLogout()">Déconnexion</button>
+    </div>
+  </nav>
+
+  <div class="admin-container">
+
+    <div class="admin-stats">
+      <div class="stat-card">
+        <span class="stat-num" id="stat-photos">—</span>
+        <span class="stat-label">Souvenirs</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-num" id="stat-quotes">—</span>
+        <span class="stat-label">Citations</span>
+      </div>
+    </div>
+
+    <div class="admin-tabs">
+      <button class="tab active" onclick="showTab('photos')">Souvenirs</button>
+      <button class="tab" onclick="showTab('quotes')">Citations</button>
+      <button class="tab" onclick="showTab('settings')">Réglages du site</button>
+    </div>
+
+    <!-- SOUVENIRS -->
+    <div class="tab-content active" id="tab-photos">
+      <div class="content-header">
+        <h3>Gérer les souvenirs</h3>
+        <button class="btn-primary" onclick="openModal('upload-modal')">+ Ajouter</button>
+      </div>
+      <div class="admin-grid" id="admin-memories-grid">
+        <div class="loading-state"><div class="loading-spinner"></div><p>Chargement...</p></div>
+      </div>
+    </div>
+
+    <!-- CITATIONS -->
+    <div class="tab-content" id="tab-quotes">
+      <div class="content-header">
+        <h3>Gérer les citations</h3>
+        <button class="btn-primary" onclick="openModal('quote-modal')">+ Ajouter</button>
+      </div>
+      <div class="quotes-list" id="quotes-list">
+        <div class="loading-state"><div class="loading-spinner"></div><p>Chargement...</p></div>
+      </div>
+    </div>
+
+    <!-- RÉGLAGES -->
+    <div class="tab-content" id="tab-settings">
+      <div class="settings-card">
+        <h3>Réglages du site</h3>
+
+        <div class="form-group">
+          <label>Nom du site (navbar)</label>
+          <input type="text" id="s-nav-brand" placeholder="✦ Souvenir" />
+        </div>
+        <div class="form-group">
+          <label>Titre de l'onglet (navigateur)</label>
+          <input type="text" id="s-page-title" placeholder="Souvenir — À toi" />
+        </div>
+        <div class="form-group">
+          <label>Petit texte au-dessus du titre (eyebrow)</label>
+          <input type="text" id="s-subtitle" placeholder="Pour toi, rien que pour toi" />
+        </div>
+        <div class="form-group">
+          <label>Titre principal hero</label>
+          <input type="text" id="s-title" placeholder="Des souvenirs gravés dans le cœur" />
+        </div>
+        <div class="form-group">
+          <label>Description hero</label>
+          <textarea id="s-desc" rows="2" placeholder="Chaque instant partagé..."></textarea>
+        </div>
+        <div class="form-group">
+          <label>Citation hero (entre guillemets)</label>
+          <input type="text" id="s-hero-quote" placeholder='"L\'amour ne se voit pas avec les yeux..."' />
+        </div>
+        <div class="form-group">
+          <label>URL image à la une (laisser vide = image par défaut)</label>
+          <input type="text" id="s-hero-image" placeholder="https://..." />
+        </div>
+        <div class="form-group">
+          <label>Message du footer</label>
+          <input type="text" id="s-footer" placeholder="Fait avec amour, pour toi" />
+        </div>
+
+        <button class="btn-primary" onclick="saveSettings()" id="save-settings-btn">Enregistrer les réglages</button>
+        <p id="settings-status" style="margin-top:12px; font-size:0.8rem; color: var(--rose); display:none;"></p>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- MODAL : Upload souvenir -->
+  <div class="modal-overlay" id="upload-modal" onclick="closeOnOverlay(event,'upload-modal')">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Nouveau souvenir</h3>
+        <button class="modal-close" onclick="closeModal('upload-modal')">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Photo</label>
+          <div class="upload-zone" onclick="document.getElementById('file-input').click()">
+            <input type="file" id="file-input" accept="image/*" style="display:none;" onchange="previewFile(event)" />
+            <div id="upload-placeholder">
+              <span class="upload-icon">🌸</span>
+              <p>Cliquez pour choisir une photo</p>
+            </div>
+            <img id="preview-img" style="display:none; max-width:100%; border-radius:4px;" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Titre / Moment</label>
+          <input type="text" id="mem-title" placeholder="Notre premier voyage..." />
+        </div>
+        <div class="form-group">
+          <label>Dédicace</label>
+          <textarea id="mem-text" rows="4" placeholder="Ce jour-là, nous étions..."></textarea>
+        </div>
+        <div class="form-group">
+          <label>Date du souvenir</label>
+          <input type="date" id="mem-date" />
+        </div>
+        <div id="upload-error" class="auth-error" style="display:none;"></div>
+        <button class="btn-primary full" id="upload-btn" onclick="uploadMemory()">Publier</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL : Citation -->
+  <div class="modal-overlay" id="quote-modal" onclick="closeOnOverlay(event,'quote-modal')">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Nouvelle citation</h3>
+        <button class="modal-close" onclick="closeModal('quote-modal')">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Citation</label>
+          <textarea id="quote-text" rows="3" placeholder="Les plus beaux souvenirs..."></textarea>
+        </div>
+        <div class="form-group">
+          <label>Auteur (optionnel)</label>
+          <input type="text" id="quote-author" placeholder="Anonyme" />
+        </div>
+        <button class="btn-primary full" onclick="saveQuote()">Enregistrer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL : Modifier souvenir -->
+  <div class="modal-overlay" id="edit-modal" onclick="closeOnOverlay(event,'edit-modal')">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Modifier le souvenir</h3>
+        <button class="modal-close" onclick="closeModal('edit-modal')">×</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="edit-id" />
+        <div class="form-group">
+          <label>Titre</label>
+          <input type="text" id="edit-title" />
+        </div>
+        <div class="form-group">
+          <label>Dédicace</label>
+          <textarea id="edit-text" rows="4"></textarea>
+        </div>
+        <div class="form-group">
+          <label>Date</label>
+          <input type="date" id="edit-date" />
+        </div>
+        <button class="btn-primary full" onclick="saveEdit()">Enregistrer</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="supabase-config.js"></script>
+  <script src="admin.js"></script>
+</body>
+</html>

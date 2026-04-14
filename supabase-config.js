@@ -3,8 +3,8 @@
 // Remplis ces valeurs avec tes propres infos
 // ============================================
 
-const SUPABASE_URL = 'https://VOTRE_PROJET_ID.supabase.co';
-const SUPABASE_ANON_KEY = 'VOTRE_ANON_KEY';
+const SUPABASE_URL = 'https://fhcsnrkmkghzananqenc.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZoY3Nucmtta2doemFuYW5xZW5jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwOTc1NjAsImV4cCI6MjA5MTY3MzU2MH0.OZvlfKwuoZXn97jhyAdTCcAskFVicBbY-_SPrrvV-Ts';
 
 // Initialisation du client Supabase
 // On charge la lib via CDN dans chaque page

@@ -1083,3 +1083,250 @@ body::before {
   .quotes-section { padding: 72px 32px; }
   .admin-stats { grid-template-columns: 1fr 1fr; }
 }
+
+/* ============================================
+   ANIMATIONS & PREMIUM ENHANCEMENTS
+   ============================================ */
+
+/* ---- CUSTOM CURSOR ---- */
+.cursor {
+  width: 36px; height: 36px;
+  border: 1px solid rgba(201,132,122,0.6);
+  border-radius: 50%;
+  position: fixed;
+  top: 0; left: 0;
+  pointer-events: none;
+  z-index: 9999;
+  transform: translate(-50%, -50%);
+  transition: width 0.3s ease, height 0.3s ease, border-color 0.3s ease, background 0.3s ease, opacity 0.3s ease;
+  mix-blend-mode: multiply;
+}
+.cursor-dot {
+  width: 5px; height: 5px;
+  background: var(--rose);
+  border-radius: 50%;
+  position: fixed;
+  top: 0; left: 0;
+  pointer-events: none;
+  z-index: 9999;
+  transform: translate(-50%, -50%);
+  transition: transform 0.1s ease;
+}
+.cursor.hovered {
+  width: 56px; height: 56px;
+  background: rgba(201,132,122,0.08);
+  border-color: var(--rose);
+}
+.cursor.clicking { width: 28px; height: 28px; background: rgba(201,132,122,0.15); }
+@media (hover: none) { .cursor, .cursor-dot { display: none; } }
+
+/* ---- PAGE TRANSITION ---- */
+.page-transition {
+  position: fixed;
+  inset: 0;
+  background: var(--cream);
+  z-index: 9000;
+  transform-origin: bottom;
+  transform: scaleY(0);
+  pointer-events: none;
+}
+.page-transition.entering { animation: pageEnter 0.5s cubic-bezier(0.76,0,0.24,1) forwards; }
+.page-transition.leaving  { animation: pageLeave 0.5s cubic-bezier(0.76,0,0.24,1) forwards; }
+@keyframes pageEnter { from { transform: scaleY(1); } to { transform: scaleY(0); transform-origin: top; } }
+@keyframes pageLeave { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+
+/* ---- FLOATING PETALS ---- */
+.petals-container {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 10;
+  overflow: hidden;
+}
+.petal {
+  position: absolute;
+  top: -20px;
+  font-size: 10px;
+  color: rgba(201,132,122,0.35);
+  animation: petalFall linear infinite;
+  user-select: none;
+}
+@keyframes petalFall {
+  0%   { transform: translateY(-20px) rotate(0deg) translateX(0); opacity: 0; }
+  10%  { opacity: 1; }
+  90%  { opacity: 0.4; }
+  100% { transform: translateY(110vh) rotate(720deg) translateX(60px); opacity: 0; }
+}
+
+/* ---- NAVBAR SCROLLED ---- */
+.navbar.scrolled {
+  height: 56px;
+  background: rgba(250,247,244,0.97);
+  box-shadow: 0 2px 24px rgba(42,31,29,0.07);
+}
+.navbar { transition: height 0.35s ease, background 0.35s ease, box-shadow 0.35s ease; }
+
+/* ---- SCROLL REVEAL ---- */
+.reveal-up, .reveal-left, .reveal-right {
+  opacity: 0;
+  transition: opacity 0.8s cubic-bezier(0.22,1,0.36,1), transform 0.8s cubic-bezier(0.22,1,0.36,1);
+  transition-delay: var(--delay, 0s);
+}
+.reveal-up    { transform: translateY(40px); }
+.reveal-left  { transform: translateX(-40px); }
+.reveal-right { transform: translateX(40px); }
+
+.reveal-up.visible,
+.reveal-left.visible,
+.reveal-right.visible {
+  opacity: 1;
+  transform: translate(0);
+}
+
+/* Gallery cards revealed staggered */
+.gallery-card {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity 0.7s cubic-bezier(0.22,1,0.36,1), transform 0.7s cubic-bezier(0.22,1,0.36,1), box-shadow 0.4s ease;
+}
+.gallery-card.visible { opacity: 1; transform: translateY(0); }
+
+/* ---- HERO DECO FLOATERS ---- */
+.hero-deco-1, .hero-deco-2 {
+  position: absolute;
+  font-family: var(--font-serif);
+  color: var(--gold);
+  pointer-events: none;
+  animation: floatDeco 4s ease-in-out infinite;
+}
+.hero-deco-1 { top: 16px; left: -24px; font-size: 1.4rem; opacity: 0.5; animation-delay: 0s; }
+.hero-deco-2 { bottom: 40px; right: -20px; font-size: 1.1rem; opacity: 0.4; animation-delay: 2s; }
+@keyframes floatDeco {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50%       { transform: translateY(-10px) rotate(8deg); }
+}
+
+/* ---- HERO SCROLL CTA ---- */
+.hero-scroll-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 36px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--rose);
+  text-decoration: none;
+  transition: gap 0.3s ease, color 0.2s ease;
+}
+.hero-scroll-cta:hover { gap: 14px; color: var(--rose-dark); }
+.hero-scroll-cta svg { transition: transform 0.3s ease; }
+.hero-scroll-cta:hover svg { transform: translateY(4px); }
+
+/* ---- MAGNETIC BUTTON ---- */
+.magnetic { display: inline-block; }
+
+/* ---- PARALLAX ---- */
+.parallax-img .hero-img-inner img {
+  will-change: transform;
+}
+
+/* ---- QUOTE TRANSITION ---- */
+.main-quote, .quote-author {
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+.main-quote.fade-out, .quote-author.fade-out {
+  opacity: 0;
+  transform: translateY(8px);
+}
+
+/* ---- COUNTER ANIMATION ---- */
+.stat-num { transition: none; }
+
+/* ---- GALLERY CARD CURSOR RIPPLE ---- */
+.gallery-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at var(--mx,50%) var(--my,50%), rgba(201,132,122,0.12) 0%, transparent 60%);
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  pointer-events: none;
+}
+.gallery-card:hover::after { opacity: 1; }
+
+/* ---- HERO IMG PARALLAX DEPTH ---- */
+.hero-right { overflow: hidden; }
+
+/* ---- QUOTES BG TEXT ---- */
+.quotes-bg-text {
+  position: absolute;
+  font-family: var(--font-serif);
+  font-size: clamp(8rem, 16vw, 14rem);
+  font-weight: 300;
+  color: rgba(255,255,255,0.03);
+  letter-spacing: 0.1em;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  white-space: nowrap;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* ---- SMOOTH IMAGE LOAD ---- */
+.gallery-card img, .detail-img-wrap img, .hero-img-inner img {
+  animation: imgFadeIn 0.6s ease both;
+}
+@keyframes imgFadeIn {
+  from { opacity: 0; filter: blur(8px); }
+  to   { opacity: 1; filter: blur(0) saturate(0.88) sepia(0.08); }
+}
+.gallery-card:hover img { filter: saturate(1) sepia(0); }
+
+/* ---- HERO RULE ANIMATION ---- */
+.hero-rule {
+  animation: ruleExpand 1.2s 0.6s cubic-bezier(0.22,1,0.36,1) both;
+  transform-origin: left;
+}
+@keyframes ruleExpand {
+  from { transform: scaleX(0); opacity: 0; }
+  to   { transform: scaleX(1); opacity: 1; }
+}
+
+/* ---- DETAIL MODAL ENHANCED ---- */
+.detail-modal {
+  animation: modalIn 0.45s cubic-bezier(0.22,1,0.36,1);
+}
+.detail-img-wrap img {
+  filter: saturate(0.92) sepia(0.06);
+  transition: filter 0.6s ease;
+}
+.detail-img-wrap img:hover { filter: saturate(1) sepia(0); }
+
+/* ---- FOOTER BRAND PULSE ---- */
+.footer-brand {
+  animation: pulse 3s ease-in-out infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 0.7; transform: scale(1); }
+  50%       { opacity: 1; transform: scale(1.12); }
+}
+
+/* ---- SECTION TITLE UNDERLINE DRAW ---- */
+.section-title {
+  position: relative;
+  display: inline-block;
+}
+.section-title::after {
+  content: '';
+  position: absolute;
+  bottom: -6px; left: 50%; right: 50%;
+  height: 1px;
+  background: var(--gold);
+  transition: left 0.6s cubic-bezier(0.22,1,0.36,1), right 0.6s cubic-bezier(0.22,1,0.36,1);
+}
+.section-header.visible .section-title::after {
+  left: 0; right: 0;
+}

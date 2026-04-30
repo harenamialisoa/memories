@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title id="page-title">Find me in the river</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ctext y='26' font-size='28'%3E🌹%3C/text%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+  <div class="cursor" id="cursor"></div>
+  <div class="cursor-dot" id="cursor-dot"></div>
+  <div class="petals-container" id="petals"></div>
+  <div class="page-transition" id="page-transition"></div>
+
+  <nav class="navbar" id="navbar">
+    <div class="nav-brand" id="nav-brand">Hello !</div>
+    <a href="login.html" class="btn-connect magnetic">Se connecter</a>
+  </nav>
+
+  <!-- HERO À LA UNE -->
+  <section class="hero">
+    <div class="hero-left reveal-left">
+      <div class="hero-text">
+        <span class="hero-eyebrow" id="hero-eyebrow">Pour toi, rien que pour toi</span>
+        <h1 class="hero-title" id="hero-title">Là où nos souvenirs<br/><em>respirent encore</em></h1>
+        <div class="hero-rule"></div>
+        <p class="hero-desc" id="hero-desc">Chaque instant partagé devient un trésor. Chaque photo, une lettre d'amour silencieuse.</p>
+        <p class="hero-quote-text" id="hero-quote">"Ce que nous avons vécu continue de battre… même loin l'un de l'autre."</p>
+        <a href="#memories" class="hero-scroll-cta magnetic">
+          <span>Découvrir</span>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 3v10M3 8l5 5 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </a>
+      </div>
+    </div>
+    <div class="hero-right reveal-right">
+      <div class="hero-img-frame parallax-img">
+        <div class="hero-img-inner">
+          <img id="hero-image" src="https://i.pinimg.com/736x/ea/e2/d3/eae2d3ba81ed09e6b3448cc4be2cf357.jpg" alt="À la une" />
+        </div>
+        <div class="hero-img-label">✦ À la une</div>
+        <div class="frame-corner tl"></div><div class="frame-corner tr"></div>
+        <div class="frame-corner bl"></div><div class="frame-corner br"></div>
+        <div class="hero-deco-1">✦</div>
+        <div class="hero-deco-2">❧</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- GALLERY -->
+  <section class="gallery-section" id="memories">
+    <div class="section-header reveal-up">
+      <div class="section-line"></div>
+      <h2 class="section-title">Nos moments</h2>
+      <div class="section-line"></div>
+    </div>
+    <p class="section-hint reveal-up" style="--delay:0.1s">Cliquez sur une photo pour découvrir son histoire</p>
+    <div class="gallery-grid" id="gallery-grid">
+      <div class="loading-state"><div class="loading-spinner"></div><p>Chargement...</p></div>
+    </div>
+  </section>
+
+  <!-- VISITOR POST SECTION -->
+  <section class="visitor-section reveal-up" id="share-memory">
+    <div class="section-header reveal-up">
+      <div class="section-line"></div>
+      <h2 class="section-title">Partagez votre souvenir</h2>
+      <div class="section-line"></div>
+    </div>
+    <p class="section-hint">Vous aussi, partagez un moment précieux — il sera visible immédiatement</p>
+    <div class="visitor-post-form">
+      <div class="vpf-grid">
+        <div class="form-group">
+          <label>Votre prénom / pseudo</label>
+          <input type="text" id="vp-pseudo" placeholder="Marie..." maxlength="40" />
+        </div>
+        <div class="form-group">
+          <label>Votre email <span class="label-note">(non affiché)</span></label>
+          <input type="email" id="vp-email" placeholder="votre@email.com" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Titre du souvenir</label>
+        <input type="text" id="vp-title" placeholder="Notre rencontre..." maxlength="80" />
+      </div>
+      <div class="form-group">
+        <label>Votre message</label>
+        <textarea id="vp-desc" rows="3" placeholder="Ce jour-là nous..." maxlength="600"></textarea>
+      </div>
+      <div class="form-group">
+        <label>Photo <span class="label-note">(optionnelle)</span></label>
+        <div class="vp-upload-zone" onclick="document.getElementById('vp-file').click()">
+          <input type="file" id="vp-file" accept="image/*" style="display:none" onchange="vpPreview(event)" />
+          <div id="vp-placeholder"><span>🌸</span><p>Cliquez pour ajouter une photo</p></div>
+          <img id="vp-preview" style="display:none;max-width:100%;border-radius:4px;" />
+        </div>
+      </div>
+      <div id="vp-error" class="auth-error" style="display:none"></div>
+      <div id="vp-success" class="vp-success" style="display:none"></div>
+      <button class="btn-primary magnetic" id="vp-submit" onclick="submitVisitorPost()">Partager ce souvenir</button>
+    </div>
+  </section>
+
+  <!-- QUOTES -->
+  <section class="quotes-section">
+    <div class="quotes-bg-text">Amour</div>
+    <div class="quotes-deco reveal-up">❧</div>
+    <blockquote class="main-quote reveal-up" id="main-quote" style="--delay:0.15s">Les plus beaux souvenirs sont ceux que l'on garde dans le cœur.</blockquote>
+    <p class="quote-author reveal-up" id="quote-author" style="--delay:0.25s">— Anonyme</p>
+    <div class="quote-dots reveal-up" id="quote-dots" style="--delay:0.35s"></div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="footer-brand">✦</div>
+    <p class="footer-msg" id="footer-msg">Fait avec amour, pour toi</p>
+    <p class="footer-copy">&copy; 2024 Find me in the river by Mickael Randria</p>
+  </footer>
+
+  <!-- MODAL DÉTAIL avec Reactions + Comments -->
+  <div class="detail-overlay" id="detail-modal" onclick="closeDetailOnOverlay(event)">
+    <div class="detail-modal">
+      <button class="detail-close" onclick="closeDetail()">×</button>
+
+      <div class="detail-img-wrap">
+        <img id="detail-img" src="" alt="" />
+      </div>
+
+      <div class="detail-body">
+        <span class="detail-date" id="detail-date"></span>
+        <h2 class="detail-title" id="detail-title"></h2>
+        <p class="detail-text" id="detail-text"></p>
+
+        <!-- REACTIONS -->
+        <div class="reactions-wrap">
+          <div class="reactions-bar" id="reactions-bar">
+            <button class="reaction-btn" data-emoji="❤️" onclick="react('❤️')">❤️ <span class="r-count" id="r-❤️">0</span></button>
+            <button class="reaction-btn" data-emoji="😢" onclick="react('😢')">😢 <span class="r-count" id="r-😢">0</span></button>
+            <button class="reaction-btn" data-emoji="😮" onclick="react('😮')">😮 <span class="r-count" id="r-😮">0</span></button>
+            <button class="reaction-btn" data-emoji="😂" onclick="react('😂')">😂 <span class="r-count" id="r-😂">0</span></button>
+            <button class="reaction-btn" data-emoji="👏" onclick="react('👏')">👏 <span class="r-count" id="r-👏">0</span></button>
+            <button class="reaction-btn" data-emoji="🌹" onclick="react('🌹')">🌹 <span class="r-count" id="r-🌹">0</span></button>
+          </div>
+        </div>
+
+        <!-- COMMENTS -->
+        <div class="comments-section">
+          <h4 class="comments-title">Commentaires</h4>
+          <div class="comments-list" id="comments-list"></div>
+          <div class="add-comment">
+            <input type="text" id="c-pseudo" placeholder="Votre prénom..." maxlength="30" class="c-input-small" />
+            <textarea id="c-content" placeholder="Votre commentaire..." rows="2" maxlength="400"></textarea>
+            <button class="btn-comment magnetic" onclick="postComment(null)">Publier</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="supabase-config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

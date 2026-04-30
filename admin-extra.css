@@ -1,0 +1,80 @@
+/* Admin extra styles for visitor posts, comments */
+
+/* VISITOR POST CARDS */
+#visitor-posts-list { display: flex; flex-direction: column; gap: 16px; }
+
+.vpost-card {
+  background: var(--white);
+  border: 1px solid rgba(201,132,122,0.14);
+  border-radius: 8px;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: 160px 1fr;
+}
+
+.vpost-img { width: 160px; height: 100%; object-fit: cover; display: block; }
+.vpost-no-img {
+  width: 160px; background: var(--parchment);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.75rem; color: var(--warm-pale); font-style: italic;
+  padding: 20px; text-align: center;
+}
+
+.vpost-body { padding: 20px 24px; }
+
+.vpost-header {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 10px; margin-bottom: 8px; flex-wrap: wrap;
+}
+
+.vpost-pseudo { font-weight: 600; font-size: 0.9rem; color: var(--warm-dark); }
+.vpost-date   { font-size: 0.72rem; color: var(--warm-muted); }
+.vpost-title  { font-family: var(--font-serif); font-size: 1.1rem; font-weight: 400; color: var(--warm-dark); margin-bottom: 6px; }
+.vpost-desc   { font-size: 0.85rem; color: var(--warm-mid); line-height: 1.6; margin-bottom: 10px; }
+.vpost-email  { font-size: 0.75rem; color: var(--warm-muted); margin-bottom: 12px; }
+
+.vpost-actions { display: flex; gap: 10px; }
+
+.btn-approve {
+  padding: 7px 18px; background: #0f6e56; color: white; border: none;
+  border-radius: 50px; font-family: var(--font-sans); font-size: 0.75rem;
+  font-weight: 600; letter-spacing: 0.08em; cursor: pointer; transition: background 0.2s;
+}
+.btn-approve:hover { background: #085041; }
+
+.btn-reject {
+  padding: 7px 18px; background: transparent; color: #9e3a3a;
+  border: 1px solid rgba(180,60,60,0.3); border-radius: 50px;
+  font-family: var(--font-sans); font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; cursor: pointer; transition: all 0.2s;
+}
+.btn-reject:hover { background: #fff0f0; }
+
+/* STATUS BADGES */
+.status-badge {
+  display: inline-block; font-size: 0.65rem; font-weight: 600;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  padding: 2px 8px; border-radius: 50px; margin-left: 8px;
+}
+.status-badge.pending  { background: #fef9ec; color: #a07820; border: 1px solid rgba(160,120,32,0.25); }
+.status-badge.approved { background: #f0faf5; color: #0f6e56; border: 1px solid rgba(15,110,86,0.25); }
+.status-badge.rejected { background: #fff0f0; color: #9e3a3a; border: 1px solid rgba(158,58,58,0.25); }
+
+/* COMMENT ADMIN ITEMS */
+.comment-admin-item {
+  background: var(--white);
+  border: 1px solid rgba(201,132,122,0.1);
+  border-radius: 6px;
+  padding: 14px 18px;
+  margin-bottom: 10px;
+}
+.comment-admin-header {
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 4px; flex-wrap: wrap;
+}
+
+@media (max-width: 700px) {
+  .vpost-card { grid-template-columns: 1fr; }
+  .vpost-img, .vpost-no-img { width: 100%; height: 160px; }
+  .admin-stats { grid-template-columns: repeat(3,1fr) !important; }
+}

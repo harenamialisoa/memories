@@ -17,6 +17,44 @@
   <div class="petals-container" id="petals"></div>
   <div class="page-transition" id="page-transition"></div>
 
+  <!-- FLOATING MESSAGE BUTTON -->
+  <button class="msg-fab" id="msg-fab" onclick="openMsgPanel()" title="Envoyer un message">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+    </svg>
+    <span class="msg-fab-badge" id="msg-fab-badge" style="display:none"></span>
+  </button>
+
+  <!-- MESSAGE PANEL -->
+  <div class="msg-panel" id="msg-panel">
+    <div class="msg-panel-header">
+      <h3>Messages</h3>
+      <button class="msg-panel-close" onclick="closeMsgPanel()">×</button>
+    </div>
+    <div class="msg-panel-body">
+      <!-- Mes messages précédents -->
+      <div id="my-messages-wrap" style="display:none">
+        <p class="msg-section-label">Vos messages</p>
+        <div id="my-messages-list"></div>
+        <div class="msg-divider"></div>
+      </div>
+      <!-- Nouveau message -->
+      <p class="msg-section-label">Nouveau message</p>
+      <div class="form-group">
+        <label>Votre prénom</label>
+        <input type="text" id="msg-pseudo" placeholder="Marie..." maxlength="40" />
+      </div>
+      <div class="form-group">
+        <label>Message</label>
+        <textarea id="msg-content" placeholder="Bonjour, je voulais vous dire..." rows="3" maxlength="800"></textarea>
+      </div>
+      <div id="msg-error"   class="auth-error" style="display:none"></div>
+      <div id="msg-success" class="vp-success" style="display:none"></div>
+      <button class="btn-primary full" id="msg-send-btn" onclick="sendMessage()">Envoyer</button>
+    </div>
+  </div>
+  <div class="msg-overlay" id="msg-overlay" onclick="closeMsgPanel()"></div>
+
   <nav class="navbar" id="navbar">
     <div class="nav-brand" id="nav-brand">Hello !</div>
     <a href="login.html" class="btn-connect magnetic">Se connecter</a>
@@ -38,11 +76,12 @@
       </div>
     </div>
     <div class="hero-right reveal-right">
-      <div class="hero-img-frame parallax-img">
+      <div class="hero-img-frame parallax-img" id="hero-frame">
+        <!-- Contenu injecté dynamiquement : image, vidéo ou memory -->
         <div class="hero-img-inner">
           <img id="hero-image" src="https://i.pinimg.com/736x/ea/e2/d3/eae2d3ba81ed09e6b3448cc4be2cf357.jpg" alt="À la une" />
         </div>
-        <div class="hero-img-label">✦ À la une</div>
+        <div class="hero-img-label" id="hero-label">✦ À la une</div>
         <div class="frame-corner tl"></div><div class="frame-corner tr"></div>
         <div class="frame-corner bl"></div><div class="frame-corner br"></div>
         <div class="hero-deco-1">✦</div>
@@ -121,23 +160,20 @@
     <p class="footer-copy">&copy; 2024 Find me in the river by Mickael Randria</p>
   </footer>
 
-  <!-- MODAL DÉTAIL avec Reactions + Comments -->
+  <!-- MODAL DÉTAIL -->
   <div class="detail-overlay" id="detail-modal" onclick="closeDetailOnOverlay(event)">
     <div class="detail-modal">
       <button class="detail-close" onclick="closeDetail()">×</button>
-
       <div class="detail-img-wrap">
         <img id="detail-img" src="" alt="" />
       </div>
-
       <div class="detail-body">
         <span class="detail-date" id="detail-date"></span>
         <h2 class="detail-title" id="detail-title"></h2>
         <p class="detail-text" id="detail-text"></p>
-
         <!-- REACTIONS -->
         <div class="reactions-wrap">
-          <div class="reactions-bar" id="reactions-bar">
+          <div class="reactions-bar">
             <button class="reaction-btn" data-emoji="❤️" onclick="react('❤️')">❤️ <span class="r-count" id="r-❤️">0</span></button>
             <button class="reaction-btn" data-emoji="😢" onclick="react('😢')">😢 <span class="r-count" id="r-😢">0</span></button>
             <button class="reaction-btn" data-emoji="😮" onclick="react('😮')">😮 <span class="r-count" id="r-😮">0</span></button>
@@ -146,7 +182,6 @@
             <button class="reaction-btn" data-emoji="🌹" onclick="react('🌹')">🌹 <span class="r-count" id="r-🌹">0</span></button>
           </div>
         </div>
-
         <!-- COMMENTS -->
         <div class="comments-section">
           <h4 class="comments-title">Commentaires</h4>

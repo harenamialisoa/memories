@@ -3,9 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Admin — Souvenir</title>
+  <title>Admin — Find me in the river</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ctext y='26' font-size='28'%3E🌹%3C/text%3E%3C/svg%3E" />
   <link rel="stylesheet" href="styles.css" />
   <link rel="stylesheet" href="admin-extra.css" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -13,7 +14,7 @@
 <body class="admin-page">
 
   <nav class="admin-nav">
-    <div class="nav-brand">✦ Souvenir <span class="admin-badge">Admin</span></div>
+    <div class="nav-brand">✦ Find me in the river <span class="admin-badge">Admin</span></div>
     <div class="admin-nav-actions">
       <a href="index.html" class="btn-outline" target="_blank">Voir le site</a>
       <button class="btn-outline" onclick="handleLogout()">Déconnexion</button>
@@ -25,7 +26,7 @@
     <!-- STATS -->
     <div class="admin-stats" style="grid-template-columns:repeat(5,1fr)">
       <div class="stat-card"><span class="stat-num" id="stat-photos">—</span><span class="stat-label">Souvenirs</span></div>
-      <div class="stat-card"><span class="stat-num" id="stat-pending" style="color:var(--gold)">—</span><span class="stat-label">En attente</span></div>
+      <div class="stat-card"><span class="stat-num" id="stat-messages" style="color:var(--rose)">—</span><span class="stat-label">Messages</span></div>
       <div class="stat-card"><span class="stat-num" id="stat-visitors">—</span><span class="stat-label">Visiteurs</span></div>
       <div class="stat-card"><span class="stat-num" id="stat-comments">—</span><span class="stat-label">Commentaires</span></div>
       <div class="stat-card"><span class="stat-num" id="stat-quotes">—</span><span class="stat-label">Citations</span></div>
@@ -33,11 +34,12 @@
 
     <!-- TABS -->
     <div class="admin-tabs">
-      <button class="tab active" onclick="showTab('photos')">Souvenirs</button>
-      <button class="tab" onclick="showTab('visitor-posts'); loadVisitorPosts()">Publications visiteurs</button>
-      <button class="tab" onclick="showTab('quotes')">Citations</button>
-      <button class="tab" onclick="showTab('comments'); loadAdminComments()">Commentaires</button>
-      <button class="tab" onclick="showTab('settings')">Réglages</button>
+      <button class="tab active"  onclick="showTab('photos')">Souvenirs</button>
+      <button class="tab"         onclick="showTab('visitor-posts');loadVisitorPosts()">Publications</button>
+      <button class="tab"         onclick="showTab('messages');loadAdminMessages()">Messages <span id="msg-unread-badge" class="unread-dot" style="display:none"></span></button>
+      <button class="tab"         onclick="showTab('quotes')">Citations</button>
+      <button class="tab"         onclick="showTab('comments');loadAdminComments()">Commentaires</button>
+      <button class="tab"         onclick="showTab('settings')">Réglages</button>
     </div>
 
     <!-- SOUVENIRS -->
@@ -53,10 +55,16 @@
 
     <!-- VISITOR POSTS -->
     <div class="tab-content" id="tab-visitor-posts">
-      <div class="content-header">
-        <h3>Publications des visiteurs</h3>
-      </div>
+      <div class="content-header"><h3>Publications des visiteurs</h3></div>
       <div id="visitor-posts-list">
+        <div class="loading-state"><div class="loading-spinner"></div><p>Chargement...</p></div>
+      </div>
+    </div>
+
+    <!-- MESSAGES -->
+    <div class="tab-content" id="tab-messages">
+      <div class="content-header"><h3>Messages des visiteurs</h3></div>
+      <div id="admin-messages-list">
         <div class="loading-state"><div class="loading-spinner"></div><p>Chargement...</p></div>
       </div>
     </div>
@@ -84,20 +92,52 @@
     <div class="tab-content" id="tab-settings">
       <div class="settings-card">
         <h3>Réglages du site</h3>
-        <div class="form-group"><label>Nom navbar</label><input type="text" id="s-nav-brand" placeholder="✦ Souvenir" /></div>
-        <div class="form-group"><label>Titre onglet</label><input type="text" id="s-page-title" placeholder="Souvenir — À toi" /></div>
+        <div class="form-group"><label>Nom navbar</label><input type="text" id="s-nav-brand" /></div>
+        <div class="form-group"><label>Titre onglet</label><input type="text" id="s-page-title" /></div>
         <div class="form-group"><label>Eyebrow hero</label><input type="text" id="s-subtitle" /></div>
         <div class="form-group"><label>Titre hero</label><input type="text" id="s-title" /></div>
         <div class="form-group"><label>Description hero</label><textarea id="s-desc" rows="2"></textarea></div>
         <div class="form-group"><label>Citation hero</label><input type="text" id="s-hero-quote" /></div>
-        <div class="form-group"><label>URL image à la une</label><input type="text" id="s-hero-image" placeholder="https://..." /></div>
         <div class="form-group"><label>Message footer</label><input type="text" id="s-footer" /></div>
+
+        <div class="settings-divider">✦ À la une</div>
+
+        <div class="form-group">
+          <label>Type d'affichage</label>
+          <select id="s-une-type" onchange="toggleUneOptions()">
+            <option value="image">Image personnalisée</option>
+            <option value="video">Vidéo (URL YouTube / Vimeo / fichier)</option>
+            <option value="memory">Un souvenir de la galerie</option>
+          </select>
+        </div>
+
+        <!-- image -->
+        <div id="une-image-wrap" class="form-group">
+          <label>URL de l'image à la une</label>
+          <input type="text" id="s-hero-image" placeholder="https://..." />
+        </div>
+
+        <!-- vidéo -->
+        <div id="une-video-wrap" class="form-group" style="display:none">
+          <label>URL de la vidéo</label>
+          <input type="text" id="s-une-video" placeholder="https://youtube.com/watch?v=... ou lien direct .mp4" />
+        </div>
+
+        <!-- memory picker -->
+        <div id="une-memory-wrap" style="display:none">
+          <label class="form-group" style="display:block;margin-bottom:8px;font-size:0.72rem;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;color:var(--warm-muted)">Choisir un souvenir</label>
+          <div class="memory-picker" id="memory-picker">
+            <div class="loading-state"><div class="loading-spinner"></div></div>
+          </div>
+          <input type="hidden" id="s-une-memory-id" />
+        </div>
+
         <button class="btn-primary" onclick="saveSettings()" id="save-settings-btn">Enregistrer</button>
         <p id="settings-status" style="margin-top:10px;font-size:0.8rem;color:var(--rose);display:none;"></p>
       </div>
     </div>
 
-  </div><!-- /admin-container -->
+  </div>
 
   <!-- MODAL Upload -->
   <div class="modal-overlay" id="upload-modal" onclick="closeOnOverlay(event,'upload-modal')">
@@ -112,8 +152,8 @@
             <img id="preview-img" style="display:none;max-width:100%;border-radius:4px;" />
           </div>
         </div>
-        <div class="form-group"><label>Titre</label><input type="text" id="mem-title" placeholder="Notre premier voyage..." /></div>
-        <div class="form-group"><label>Dédicace</label><textarea id="mem-text" rows="4" placeholder="Ce jour-là..."></textarea></div>
+        <div class="form-group"><label>Titre</label><input type="text" id="mem-title" /></div>
+        <div class="form-group"><label>Dédicace</label><textarea id="mem-text" rows="4"></textarea></div>
         <div class="form-group"><label>Date</label><input type="date" id="mem-date" /></div>
         <div id="upload-error" class="auth-error" style="display:none"></div>
         <button class="btn-primary full" id="upload-btn" onclick="uploadMemory()">Publier</button>

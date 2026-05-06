@@ -26,14 +26,14 @@ async function loadAdminStats() {
       supabaseClient.from('memories').select('id'),
       supabaseClient.from('quotes').select('id'),
       supabaseClient.from('visitor_count').select('total').single(),
-      supabaseClient.from('messages').select('id, read'),
+      supabaseClient.from('messages').select('id, read_by_admin, sender'),
       supabaseClient.from('comments').select('id')
     ]);
     setStatNum('stat-photos',   mems?.length     ?? '—');
     setStatNum('stat-quotes',   quotes?.length   ?? '—');
     setStatNum('stat-visitors', views?.total     ?? '—');
     setStatNum('stat-comments', comments?.length ?? '—');
-    const unread = (msgs || []).filter(m => !m.read).length;
+    const unread = (msgs || []).filter(m => m.sender === 'visitor' && !m.read_by_admin).length;
     setStatNum('stat-messages', msgs?.length ?? '—');
     const badge = document.getElementById('msg-unread-badge');
     if (badge) badge.style.display = unread > 0 ? 'inline-block' : 'none';
@@ -190,58 +190,209 @@ async function deleteVisitorPost(id, imagePath) {
 }
 
 // ====================================
-// MESSAGES
+// MESSAGES — Admin Messenger Real-time
 // ====================================
+let activeSession    = null;
+let adminMsgSub      = null;
+let adminConvSub     = null;
+let lastAdmMsgDate   = null;
+
 async function loadAdminMessages() {
-  const list = document.getElementById('admin-messages-list');
-  if (!list) return;
+  await loadConversations();
+  subscribeNewConversations();
+}
+
+async function loadConversations() {
+  const items = document.getElementById('adm-conv-items');
+  if (!items) return;
   try {
-    const { data } = await supabaseClient.from('messages').select('*').order('created_at', { ascending: false });
-    const unread = (data||[]).filter(m=>!m.read);
-    const badge  = document.getElementById('msg-unread-badge');
-    if (badge) badge.style.display = unread.length > 0 ? 'inline-block' : 'none';
-    setStatNum('stat-messages', data?.length??0);
+    // Grouper par session_token, prendre le dernier message
+    const { data } = await supabaseClient
+      .from('messages')
+      .select('*')
+      .order('created_at', { ascending: false });
 
-    if (!data || data.length === 0) { list.innerHTML = '<div class="empty-state"><p>Aucun message.</p></div>'; return; }
-
-    // Marquer comme lus
-    if (unread.length > 0) {
-      await supabaseClient.from('messages').update({ read: true }).in('id', unread.map(m=>m.id));
+    if (!data || data.length === 0) {
+      items.innerHTML = '<div style="padding:20px;font-size:0.82rem;color:var(--warm-muted);text-align:center;">Aucune conversation</div>';
+      setStatNum('stat-messages', 0);
+      return;
     }
 
-    list.innerHTML = data.map(m => `
-      <div class="admin-msg-item ${m.read?'':'unread'}" id="amsg-${m.id}">
-        <div class="admin-msg-header">
-          ${!m.read ? '<span class="unread-dot"></span>' : ''}
-          <span class="admin-msg-pseudo">${esc(m.pseudo)}</span>
-          <span class="admin-msg-time">${timeAgo(m.created_at)}</span>
+    // Grouper par session_token
+    const sessions = {};
+    data.forEach(m => {
+      if (!sessions[m.session_token]) sessions[m.session_token] = { msgs: [], pseudo: m.pseudo, unread: 0 };
+      sessions[m.session_token].msgs.push(m);
+      if (m.sender === 'visitor' && !m.read_by_admin) sessions[m.session_token].unread++;
+    });
+
+    const totalUnread = Object.values(sessions).reduce((s, v) => s + v.unread, 0);
+    setStatNum('stat-messages', Object.keys(sessions).length);
+    const badge = document.getElementById('msg-unread-badge');
+    if (badge) badge.style.display = totalUnread > 0 ? 'inline-block' : 'none';
+
+    items.innerHTML = Object.entries(sessions).map(([token, s]) => {
+      const last    = s.msgs[0];
+      const preview = last.content.length > 30 ? last.content.slice(0,30)+'…' : last.content;
+      const initials = (s.pseudo||'?')[0].toUpperCase();
+      const isActive = token === activeSession ? 'active' : '';
+      const isUnread = s.unread > 0 ? 'unread' : '';
+      return `<div class="adm-conv-item ${isActive} ${isUnread}" onclick="openConversation('${token}','${esc(s.pseudo)}')">
+        <div class="adm-conv-avatar">${initials}</div>
+        <div class="adm-conv-info">
+          <div class="adm-conv-name">${esc(s.pseudo)}</div>
+          <div class="adm-conv-preview">${last.sender==='admin'?'Vous: ':''}${esc(preview)}</div>
         </div>
-        <div class="admin-msg-text">${esc(m.content)}</div>
-        <div class="admin-msg-reply-wrap">
-          ${m.reply
-            ? `<div class="existing-reply"><div class="existing-reply-label">Votre réponse</div>${esc(m.reply)}</div>
-               <textarea class="admin-msg-reply-input" id="ri-${m.id}" rows="2">${esc(m.reply)}</textarea>
-               <button class="btn-ghost" onclick="replyMessage('${m.id}')">Modifier la réponse</button>`
-            : `<textarea class="admin-msg-reply-input" id="ri-${m.id}" rows="2" placeholder="Votre réponse..."></textarea>
-               <button class="btn-ghost" onclick="replyMessage('${m.id}')">Répondre</button>`}
-          <button class="btn-danger" style="margin-top:4px" onclick="deleteMessage('${m.id}')">Supprimer</button>
+        <div class="adm-conv-meta">
+          <div class="adm-conv-time">${formatMsgTime(last.created_at)}</div>
+          ${s.unread > 0 ? `<div class="adm-unread-count">${s.unread}</div>` : ''}
         </div>
-      </div>`).join('');
+      </div>`;
+    }).join('');
+  } catch (e) { console.error(e); }
+}
+
+async function openConversation(token, pseudo) {
+  activeSession = token;
+  // UI updates
+  document.getElementById('adm-empty-chat').style.display      = 'none';
+  document.getElementById('adm-chat-header').style.display      = 'flex';
+  document.getElementById('adm-chat-messages').style.display    = 'flex';
+  document.getElementById('adm-chat-input-bar').style.display   = 'flex';
+  document.getElementById('adm-chat-name').textContent           = pseudo;
+  document.getElementById('adm-chat-avatar').textContent         = (pseudo||'?')[0].toUpperCase();
+
+  document.querySelectorAll('.adm-conv-item').forEach(el => el.classList.remove('active'));
+  event?.currentTarget?.classList.add('active');
+
+  // Load messages
+  await loadConvMessages(token);
+  // Mark as read
+  await supabaseClient.from('messages').update({ read_by_admin: true }).eq('session_token', token).eq('sender', 'visitor');
+  // Subscribe real-time for this conv
+  subscribeConversation(token);
+  await loadConversations();
+  document.getElementById('adm-input')?.focus();
+}
+
+async function loadConvMessages(token) {
+  const container = document.getElementById('adm-chat-messages');
+  lastAdmMsgDate  = null;
+  try {
+    const { data } = await supabaseClient
+      .from('messages').select('*').eq('session_token', token)
+      .order('created_at', { ascending: true });
+
+    if (!data || data.length === 0) {
+      container.innerHTML = '<div style="text-align:center;padding:24px;font-family:var(--font-serif);font-style:italic;color:var(--warm-muted);font-size:0.9rem;">Début de la conversation</div>';
+      return;
+    }
+    container.innerHTML = data.map(m => renderAdmBubble(m)).join('');
+    container.scrollTop = container.scrollHeight;
   } catch (e) {}
 }
 
-async function replyMessage(id) {
-  const reply = document.getElementById('ri-' + id)?.value.trim();
-  if (!reply) return;
-  const { error } = await supabaseClient.from('messages').update({ reply, replied_at: new Date().toISOString() }).eq('id', id);
-  if (error) { alert('Erreur: '+error.message); return; }
-  await loadAdminMessages();
+function renderAdmBubble(msg) {
+  const isAdmin = msg.sender === 'admin';
+  const time    = formatMsgTime(msg.created_at);
+  const dateStr = getMsgDate(msg.created_at);
+  let sep = '';
+  if (dateStr !== lastAdmMsgDate) {
+    sep = `<div class="msn-day-sep">${dateStr}</div>`;
+    lastAdmMsgDate = dateStr;
+  }
+  const initials = isAdmin ? '🌹' : (msg.pseudo||'V')[0].toUpperCase();
+  const style    = isAdmin ? 'background:var(--rose-light);color:var(--rose-dark);font-size:0.9rem;' : '';
+  return `${sep}
+  <div class="msn-bubble-wrap ${isAdmin ? 'admin' : 'visitor'}">
+    <div class="msn-bubble-avatar" style="${style}">${initials}</div>
+    <div>
+      <div class="msn-bubble">${esc(msg.content)}</div>
+      <div class="msn-bubble-time">${time}</div>
+    </div>
+  </div>`;
+}
+
+function subscribeConversation(token) {
+  if (adminMsgSub) supabaseClient.removeChannel(adminMsgSub);
+  adminMsgSub = supabaseClient
+    .channel('admin-conv-' + token)
+    .on('postgres_changes', {
+      event: 'INSERT', schema: 'public', table: 'messages',
+      filter: `session_token=eq.${token}`
+    }, payload => {
+      const container = document.getElementById('adm-chat-messages');
+      if (!container) return;
+      const div = document.createElement('div');
+      div.innerHTML = renderAdmBubble(payload.new);
+      while (div.firstChild) container.appendChild(div.firstChild);
+      container.scrollTop = container.scrollHeight;
+      loadConversations();
+      // Mark visitor messages as read
+      if (payload.new.sender === 'visitor') {
+        supabaseClient.from('messages').update({ read_by_admin: true }).eq('id', payload.new.id).then(()=>{});
+      }
+    })
+    .subscribe();
+}
+
+function subscribeNewConversations() {
+  if (adminConvSub) supabaseClient.removeChannel(adminConvSub);
+  adminConvSub = supabaseClient
+    .channel('admin-all-msgs')
+    .on('postgres_changes', {
+      event: 'INSERT', schema: 'public', table: 'messages',
+      filter: 'sender=eq.visitor'
+    }, () => { loadConversations(); })
+    .subscribe();
+}
+
+async function sendAdminMessage() {
+  if (!activeSession) return;
+  const input   = document.getElementById('adm-input');
+  const content = input.value.trim();
+  if (!content) return;
+  input.value = ''; autoResizeAdm(input);
+  try {
+    await supabaseClient.from('messages').insert([{
+      pseudo:          'Admin',
+      content,
+      sender:          'admin',
+      session_token:   activeSession,
+      read_by_admin:   true,
+      read_by_visitor: false
+    }]);
+  } catch (e) { console.error(e); input.value = content; }
+}
+
+function handleAdmKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendAdminMessage(); }
+}
+
+function autoResizeAdm(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 100) + 'px';
 }
 
 async function deleteMessage(id) {
-  if (!confirm('Supprimer ce message ?')) return;
+  if (!confirm('Supprimer ?')) return;
   await supabaseClient.from('messages').delete().eq('id', id);
-  await loadAdminMessages(); await loadAdminStats();
+  if (activeSession) await loadConvMessages(activeSession);
+  await loadConversations();
+}
+
+function formatMsgTime(d) {
+  const date = new Date(d);
+  const today = new Date();
+  if (date.toDateString() === today.toDateString()) return date.toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' });
+  return date.toLocaleDateString('fr-FR', { day:'numeric', month:'short' }) + ' ' + date.toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' });
+}
+function getMsgDate(d) {
+  const date = new Date(d), today = new Date(), yesterday = new Date(today);
+  yesterday.setDate(today.getDate()-1);
+  if (date.toDateString() === today.toDateString())     return "Aujourd'hui";
+  if (date.toDateString() === yesterday.toDateString()) return 'Hier';
+  return date.toLocaleDateString('fr-FR', { day:'numeric', month:'long', year:'numeric' });
 }
 
 // ====================================
@@ -310,20 +461,46 @@ async function deleteQuote(id) {
 // ====================================
 // SETTINGS + À LA UNE
 // ====================================
+// ====================================
+// À LA UNE — Settings logic
+// ====================================
+function setUneType(type, btn) {
+  // Update hidden input
+  document.getElementById('s-une-type').value = type;
+  // Update tabs
+  document.querySelectorAll('.une-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  // Show/hide panels
+  ['image','video','memory','new'].forEach(t => {
+    const el = document.getElementById('une-' + t + '-wrap');
+    if (el) el.style.display = t === type ? 'block' : 'none';
+  });
+  if (type === 'memory') loadMemoryPicker();
+}
+
 function toggleUneOptions() {
-  const type = document.getElementById('s-une-type').value;
-  document.getElementById('une-image-wrap').style.display  = type==='image'  ? 'block' : 'none';
-  document.getElementById('une-video-wrap').style.display  = type==='video'  ? 'block' : 'none';
-  document.getElementById('une-memory-wrap').style.display = type==='memory' ? 'block' : 'none';
+  const type = document.getElementById('s-une-type').value || 'image';
+  // Sync tab buttons
+  document.querySelectorAll('.une-tab').forEach((btn, i) => {
+    const types = ['image','video','memory','new'];
+    btn.classList.toggle('active', types[i] === type);
+  });
+  ['image','video','memory','new'].forEach(t => {
+    const el = document.getElementById('une-' + t + '-wrap');
+    if (el) el.style.display = t === type ? 'block' : 'none';
+  });
   if (type === 'memory') loadMemoryPicker();
 }
 
 async function loadMemoryPicker() {
-  const picker = document.getElementById('memory-picker');
+  const picker     = document.getElementById('memory-picker');
   const selectedId = document.getElementById('s-une-memory-id').value;
   try {
     const { data } = await supabaseClient.from('memories').select('*').order('memory_date', { ascending: true });
-    if (!data || data.length === 0) { picker.innerHTML = '<p style="padding:12px;font-size:0.8rem;color:var(--warm-muted);">Aucun souvenir.</p>'; return; }
+    if (!data || data.length === 0) {
+      picker.innerHTML = '<p style="grid-column:1/-1;padding:16px;font-size:0.8rem;color:var(--warm-muted);text-align:center;">Aucun souvenir dans la galerie.</p>';
+      return;
+    }
     picker.innerHTML = data.map(m => {
       const img = getImageUrl(m.image_path);
       const sel = m.id === selectedId ? 'selected' : '';
@@ -341,6 +518,90 @@ function selectMemory(id, el) {
   document.getElementById('s-une-memory-id').value = id;
 }
 
+function previewUneImage() {
+  const url = document.getElementById('s-hero-image').value.trim();
+  if (!url) return;
+  const wrap = document.getElementById('une-img-preview-wrap');
+  const img  = document.getElementById('une-img-preview');
+  img.src = url; wrap.style.display = 'block';
+}
+
+function previewUneVideo() {
+  const url = document.getElementById('s-une-video').value.trim();
+  if (!url) return;
+  let embed = url;
+  const yt = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/))([a-zA-Z0-9_-]{11})/);
+  if (yt) embed = `https://www.youtube.com/embed/${yt[1]}`;
+  const wrap  = document.getElementById('une-yt-preview');
+  const frame = document.getElementById('une-yt-iframe');
+  frame.src = embed; wrap.style.display = 'block';
+}
+
+function uneNewPreview(event) {
+  const file = event.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    document.getElementById('une-new-preview').src = e.target.result;
+    document.getElementById('une-new-preview').style.display = 'block';
+    document.getElementById('une-new-placeholder').style.display = 'none';
+  };
+  reader.readAsDataURL(file);
+}
+
+async function saveNewUneMemory() {
+  const file  = document.getElementById('une-new-file').files[0];
+  const title = document.getElementById('une-new-title').value.trim();
+  const desc  = document.getElementById('une-new-desc').value.trim();
+  const date  = document.getElementById('une-new-date').value;
+  const btn   = document.getElementById('une-new-btn');
+  const errEl = document.getElementById('une-new-error');
+  const sucEl = document.getElementById('une-new-success');
+
+  errEl.style.display = sucEl.style.display = 'none';
+  if (!file)  { errEl.textContent='Photo requise.';  errEl.style.display='block'; return; }
+  if (!title) { errEl.textContent='Titre requis.';   errEl.style.display='block'; return; }
+
+  btn.textContent='Publication...'; btn.disabled=true;
+  try {
+    const ext = file.name.split('.').pop();
+    const fn  = `${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+    const { error: sErr } = await supabaseClient.storage.from(STORAGE_BUCKET).upload(fn, file, { cacheControl:'3600' });
+    if (sErr) throw sErr;
+    const { data: mem, error: dErr } = await supabaseClient.from('memories')
+      .insert([{ title, description: desc||null, image_path: fn, memory_date: date||null }])
+      .select().single();
+    if (dErr) throw dErr;
+
+    // Sélectionner automatiquement comme à la une
+    document.getElementById('s-une-type').value   = 'memory';
+    document.getElementById('s-une-memory-id').value = mem.id;
+    // Switch tab to memory
+    document.querySelectorAll('.une-tab').forEach((t,i)=> t.classList.toggle('active', i===2));
+    ['image','video','memory','new'].forEach(t => {
+      const el = document.getElementById('une-' + t + '-wrap');
+      if (el) el.style.display = t==='memory' ? 'block' : 'none';
+    });
+    await loadMemoryPicker();
+    // Highlight the new one
+    document.querySelectorAll('.picker-card').forEach(card => {
+      if (!card.classList.contains('selected')) return;
+    });
+
+    // Reset form
+    document.getElementById('une-new-file').value  = '';
+    document.getElementById('une-new-title').value = '';
+    document.getElementById('une-new-desc').value  = '';
+    document.getElementById('une-new-date').value  = '';
+    document.getElementById('une-new-preview').style.display    = 'none';
+    document.getElementById('une-new-placeholder').style.display = 'block';
+
+    sucEl.textContent   = '✦ Souvenir publié et sélectionné comme à la une !';
+    sucEl.style.display = 'block';
+    await loadAdminMemories(); await loadAdminStats();
+  } catch (e) { errEl.textContent=e.message||'Erreur.'; errEl.style.display='block'; }
+  finally { btn.textContent='Publier ce souvenir'; btn.disabled=false; }
+}
+
 async function loadSettings() {
   try {
     const { data } = await supabaseClient.from('settings').select('*').eq('id',1).single();
@@ -355,9 +616,14 @@ async function loadSettings() {
     setVal('s-footer',       data.footer_msg);
     setVal('s-une-video',    data.une_video_url);
     setVal('s-une-memory-id',data.une_memory_id);
+    setVal('s-une-title',    data.une_title);
+    setVal('s-une-desc',     data.une_desc);
+    setVal('s-une-date',     data.une_date);
     // Type à la une
-    const sel = document.getElementById('s-une-type');
-    if (sel && data.une_type) { sel.value = data.une_type; toggleUneOptions(); }
+    if (data.une_type) {
+      document.getElementById('s-une-type').value = data.une_type;
+      toggleUneOptions();
+    }
   } catch (e) {}
 }
 
@@ -377,8 +643,11 @@ async function saveSettings() {
     hero_image_url: getVal('s-hero-image'),
     footer_msg:     getVal('s-footer'),
     une_type:       type,
+    une_title:      getVal('s-une-title'),
+    une_desc:       getVal('s-une-desc'),
+    une_date:       getVal('s-une-date') || null,
     une_video_url:  type==='video'  ? getVal('s-une-video')     : null,
-    une_memory_id:  type==='memory' ? getVal('s-une-memory-id') : null,
+    une_memory_id:  (type==='memory'||type==='new') ? getVal('s-une-memory-id') : null,
     updated_at:     new Date().toISOString()
   };
   Object.keys(payload).forEach(k => { if (payload[k]==='') payload[k]=null; });

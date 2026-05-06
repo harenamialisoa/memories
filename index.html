@@ -18,44 +18,72 @@
   <div class="page-transition" id="page-transition"></div>
 
   <!-- FLOATING MESSAGE BUTTON -->
-  <button class="msg-fab" id="msg-fab" onclick="openMsgPanel()" title="Envoyer un message">
+  <button class="msg-fab" id="msg-fab" onclick="toggleMessenger()" title="Messages">
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
     </svg>
-    <span class="msg-fab-badge" id="msg-fab-badge" style="display:none"></span>
+    <span class="msg-fab-badge" id="msg-fab-badge"></span>
   </button>
 
-  <!-- MESSAGE PANEL -->
-  <div class="msg-panel" id="msg-panel">
-    <div class="msg-panel-header">
-      <h3>Messages</h3>
-      <button class="msg-panel-close" onclick="closeMsgPanel()">×</button>
+  <!-- MESSENGER WINDOW -->
+  <div class="messenger-window" id="messenger-window">
+    <!-- Header -->
+    <div class="msn-header">
+      <div class="msn-avatar">
+        🌹
+        <div class="msn-online-dot"></div>
+      </div>
+      <div class="msn-info">
+        <div class="msn-name" id="msn-name-header">Find me in the river</div>
+        <div class="msn-status">
+          <span style="width:6px;height:6px;background:#40c057;border-radius:50%;display:inline-block;"></span>
+          En ligne
+        </div>
+      </div>
+      <button class="msn-close" onclick="toggleMessenger()">×</button>
     </div>
-    <div class="msg-panel-body">
-      <!-- Mes messages précédents -->
-      <div id="my-messages-wrap" style="display:none">
-        <p class="msg-section-label">Vos messages</p>
-        <div id="my-messages-list"></div>
-        <div class="msg-divider"></div>
+
+    <!-- Pseudo prompt (first time) -->
+    <div class="msn-pseudo-prompt" id="msn-pseudo-prompt">
+      <p>Comment souhaitez-vous vous appeler ?</p>
+      <div class="msn-pseudo-row">
+        <input type="text" class="msn-pseudo-input" id="msn-pseudo-input" placeholder="Votre prénom..." maxlength="30" />
+        <button class="msn-pseudo-confirm" onclick="confirmPseudo()">OK</button>
       </div>
-      <!-- Nouveau message -->
-      <p class="msg-section-label">Nouveau message</p>
-      <div class="form-group">
-        <label>Votre prénom</label>
-        <input type="text" id="msg-pseudo" placeholder="Marie..." maxlength="40" />
+    </div>
+
+    <!-- Messages -->
+    <div class="msn-messages" id="msn-messages">
+      <div class="msn-empty" id="msn-empty">
+        <div class="msn-empty-icon">💬</div>
+        <p>Envoyez un message — nous vous répondrons dès que possible ✦</p>
       </div>
-      <div class="form-group">
-        <label>Message</label>
-        <textarea id="msg-content" placeholder="Bonjour, je voulais vous dire..." rows="3" maxlength="800"></textarea>
+    </div>
+
+    <!-- Typing -->
+    <div class="msn-typing" id="msn-typing">
+      <div class="msn-bubble-avatar" style="background:var(--rose-light);color:var(--rose-dark);">🌹</div>
+      <div class="msn-typing-bubble">
+        <div class="msn-typing-dot"></div>
+        <div class="msn-typing-dot"></div>
+        <div class="msn-typing-dot"></div>
       </div>
-      <div id="msg-error"   class="auth-error" style="display:none"></div>
-      <div id="msg-success" class="vp-success" style="display:none"></div>
-      <button class="btn-primary full" id="msg-send-btn" onclick="sendMessage()">Envoyer</button>
+    </div>
+
+    <!-- Input -->
+    <div class="msn-input-bar">
+      <div class="msn-input-wrap">
+        <textarea class="msn-input" id="msn-input" placeholder="Aa" rows="1"
+          onkeydown="handleMsgKey(event)" oninput="autoResize(this)"></textarea>
+      </div>
+      <button class="msn-send-btn" id="msn-send-btn" onclick="sendVisitorMessage()">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+      </button>
     </div>
   </div>
-  <div class="msg-overlay" id="msg-overlay" onclick="closeMsgPanel()"></div>
 
-  <nav class="navbar" id="navbar">
+
+    <nav class="navbar" id="navbar">
     <div class="nav-brand" id="nav-brand">Hello !</div>
     <a href="login.html" class="btn-connect magnetic">Se connecter</a>
   </nav>

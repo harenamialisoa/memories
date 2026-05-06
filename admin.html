@@ -63,9 +63,43 @@
 
     <!-- MESSAGES -->
     <div class="tab-content" id="tab-messages">
-      <div class="content-header"><h3>Messages des visiteurs</h3></div>
-      <div id="admin-messages-list">
-        <div class="loading-state"><div class="loading-spinner"></div><p>Chargement...</p></div>
+      <div class="admin-messenger" id="admin-messenger">
+        <!-- Conversations list -->
+        <div class="adm-conv-list">
+          <div class="adm-conv-header">Messages</div>
+          <div class="adm-conv-items" id="adm-conv-items">
+            <div class="loading-state" style="padding:24px 0;"><div class="loading-spinner"></div></div>
+          </div>
+        </div>
+        <!-- Chat panel -->
+        <div class="adm-chat-panel" id="adm-chat-panel">
+          <div class="adm-empty-chat" id="adm-empty-chat">
+            <span style="font-size:2rem;opacity:0.4;">💬</span>
+            <p>Sélectionnez une conversation</p>
+          </div>
+          <!-- Chat header (hidden until selected) -->
+          <div class="adm-chat-header" id="adm-chat-header" style="display:none">
+            <div class="msn-bubble-avatar" id="adm-chat-avatar" style="width:36px;height:36px;font-size:0.9rem;background:var(--rose-light);color:var(--rose-dark);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;"></div>
+            <div>
+              <div class="adm-chat-name" id="adm-chat-name"></div>
+              <div class="adm-chat-status" id="adm-chat-status"></div>
+            </div>
+          </div>
+          <div class="adm-chat-messages" id="adm-chat-messages" style="display:none"></div>
+          <!-- Typing indicator admin-side -->
+          <div class="msn-typing" id="adm-typing" style="display:none;padding:4px 18px 8px;">
+            <div class="msn-typing-bubble"><div class="msn-typing-dot"></div><div class="msn-typing-dot"></div><div class="msn-typing-dot"></div></div>
+          </div>
+          <div class="adm-chat-input-bar" id="adm-chat-input-bar" style="display:none">
+            <div class="msn-input-wrap" style="flex:1">
+              <textarea class="msn-input" id="adm-input" placeholder="Répondre..." rows="1"
+                onkeydown="handleAdmKey(event)" oninput="autoResizeAdm(this)"></textarea>
+            </div>
+            <button class="msn-send-btn" onclick="sendAdminMessage()">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+            </button>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -102,34 +136,102 @@
 
         <div class="settings-divider">✦ À la une</div>
 
+        <!-- Titre & description à la une -->
+        <div class="une-meta-grid">
+          <div class="form-group">
+            <label>Titre à la une <span class="label-note">(affiché sur la photo)</span></label>
+            <input type="text" id="s-une-title" placeholder="Notre premier souvenir..." />
+          </div>
+          <div class="form-group">
+            <label>Date à la une <span class="label-note">(optionnelle)</span></label>
+            <input type="date" id="s-une-date" />
+          </div>
+        </div>
         <div class="form-group">
-          <label>Type d'affichage</label>
-          <select id="s-une-type" onchange="toggleUneOptions()">
-            <option value="image">Image personnalisée</option>
-            <option value="video">Vidéo (URL YouTube / Vimeo / fichier)</option>
-            <option value="memory">Un souvenir de la galerie</option>
-          </select>
+          <label>Description à la une <span class="label-note">(optionnelle)</span></label>
+          <textarea id="s-une-desc" rows="2" placeholder="Un moment inoubliable..."></textarea>
         </div>
 
-        <!-- image -->
-        <div id="une-image-wrap" class="form-group">
-          <label>URL de l'image à la une</label>
-          <input type="text" id="s-hero-image" placeholder="https://..." />
+        <!-- Type -->
+        <div class="une-type-tabs" id="une-type-tabs">
+          <button class="une-tab active" onclick="setUneType('image',this)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>
+            Image
+          </button>
+          <button class="une-tab" onclick="setUneType('video',this)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+            Vidéo YouTube
+          </button>
+          <button class="une-tab" onclick="setUneType('memory',this)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
+            Galerie
+          </button>
+          <button class="une-tab" onclick="setUneType('new',this)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+            Nouveau souvenir
+          </button>
+        </div>
+        <input type="hidden" id="s-une-type" value="image" />
+
+        <!-- IMAGE -->
+        <div id="une-image-wrap" class="une-panel">
+          <div class="form-group">
+            <label>URL de l'image</label>
+            <input type="text" id="s-hero-image" placeholder="https://images.unsplash.com/..." />
+          </div>
+          <div class="une-preview-wrap" id="une-img-preview-wrap" style="display:none">
+            <img id="une-img-preview" src="" style="width:100%;max-height:200px;object-fit:cover;border-radius:8px;" />
+          </div>
+          <button class="btn-ghost" style="margin-top:4px;font-size:0.75rem;" onclick="previewUneImage()">Prévisualiser</button>
         </div>
 
-        <!-- vidéo -->
-        <div id="une-video-wrap" class="form-group" style="display:none">
-          <label>URL de la vidéo</label>
-          <input type="text" id="s-une-video" placeholder="https://youtube.com/watch?v=... ou lien direct .mp4" />
+        <!-- VIDEO -->
+        <div id="une-video-wrap" class="une-panel" style="display:none">
+          <div class="form-group">
+            <label>Lien YouTube</label>
+            <input type="text" id="s-une-video" placeholder="https://www.youtube.com/watch?v=..." />
+          </div>
+          <div class="une-yt-preview" id="une-yt-preview" style="display:none">
+            <iframe id="une-yt-iframe" src="" width="100%" height="180" frameborder="0" allow="autoplay;fullscreen" allowfullscreen style="border-radius:8px;"></iframe>
+          </div>
+          <button class="btn-ghost" style="margin-top:4px;font-size:0.75rem;" onclick="previewUneVideo()">Prévisualiser</button>
         </div>
 
-        <!-- memory picker -->
-        <div id="une-memory-wrap" style="display:none">
-          <label class="form-group" style="display:block;margin-bottom:8px;font-size:0.72rem;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;color:var(--warm-muted)">Choisir un souvenir</label>
+        <!-- GALERIE PICKER -->
+        <div id="une-memory-wrap" class="une-panel" style="display:none">
+          <p class="une-panel-hint">Cliquez sur un souvenir pour le sélectionner comme à la une</p>
           <div class="memory-picker" id="memory-picker">
-            <div class="loading-state"><div class="loading-spinner"></div></div>
+            <div class="loading-state" style="grid-column:1/-1;padding:20px 0;"><div class="loading-spinner"></div></div>
           </div>
           <input type="hidden" id="s-une-memory-id" />
+        </div>
+
+        <!-- NOUVEAU SOUVENIR -->
+        <div id="une-new-wrap" class="une-panel" style="display:none">
+          <p class="une-panel-hint">Ajoutez un tout nouveau souvenir directement ici — il sera aussi visible dans la galerie</p>
+          <div class="form-group">
+            <label>Photo</label>
+            <div class="vp-upload-zone" onclick="document.getElementById('une-new-file').click()" style="padding:20px;">
+              <input type="file" id="une-new-file" accept="image/*" style="display:none" onchange="uneNewPreview(event)" />
+              <div id="une-new-placeholder"><span>🌸</span><p>Cliquez pour choisir une photo</p></div>
+              <img id="une-new-preview" style="display:none;max-width:100%;border-radius:4px;" />
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Titre du souvenir</label>
+            <input type="text" id="une-new-title" placeholder="Notre premier voyage..." />
+          </div>
+          <div class="form-group">
+            <label>Dédicace</label>
+            <textarea id="une-new-desc" rows="3" placeholder="Ce jour-là..."></textarea>
+          </div>
+          <div class="form-group">
+            <label>Date</label>
+            <input type="date" id="une-new-date" />
+          </div>
+          <div id="une-new-error" class="auth-error" style="display:none"></div>
+          <div id="une-new-success" class="vp-success" style="display:none"></div>
+          <button class="btn-primary" onclick="saveNewUneMemory()" id="une-new-btn">Publier ce souvenir</button>
         </div>
 
         <button class="btn-primary" onclick="saveSettings()" id="save-settings-btn">Enregistrer</button>

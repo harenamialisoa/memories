@@ -59,65 +59,58 @@ async function applySettings() {
 
     // À la une : image / vidéo / memory
     const type = data.une_type || 'image';
+    const uneMeta = { title: data.une_title, desc: data.une_desc, date: data.une_date };
     if (type === 'video' && data.une_video_url) {
-      renderHeroVideo(data.une_video_url);
-    } else if (type === 'memory' && data.une_memory_id) {
-      await renderHeroMemory(data.une_memory_id);
+      renderHeroVideo(data.une_video_url, uneMeta);
+    } else if ((type === 'memory' || type === 'new') && data.une_memory_id) {
+      await renderHeroMemory(data.une_memory_id, uneMeta);
     } else {
-      // image par défaut
       const img = document.getElementById('hero-image');
       if (img && data.hero_image_url) img.src = data.hero_image_url;
+      // Afficher titre/desc sur image si renseignés
+      if (uneMeta.title) renderHeroImageMeta(uneMeta);
     }
   } catch (e) {}
 }
 
-function renderHeroVideo(url) {
+function renderHeroVideo(url, meta={}) {
   const frame = document.getElementById('hero-frame');
-  // Détecter YouTube / Vimeo / fichier direct
   let embedUrl = url;
   const ytMatch = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/))([a-zA-Z0-9_-]{11})/);
   const vmMatch = url.match(/vimeo\.com\/(\d+)/);
   if (ytMatch) embedUrl = `https://www.youtube.com/embed/${ytMatch[1]}?autoplay=1&mute=1&loop=1&playlist=${ytMatch[1]}&controls=0`;
   else if (vmMatch) embedUrl = `https://player.vimeo.com/video/${vmMatch[1]}?autoplay=1&muted=1&loop=1&background=1`;
-
-  const inner = frame.querySelector('.hero-img-inner') || frame;
   const isEmbed = ytMatch || vmMatch;
-
-  if (isEmbed) {
-    frame.innerHTML = `
-      <div class="hero-video-inner">
-        <iframe src="${embedUrl}" allow="autoplay; fullscreen" allowfullscreen></iframe>
-      </div>
-      <div class="hero-img-label" id="hero-label">✦ À la une</div>
-      <div class="frame-corner tl"></div><div class="frame-corner tr"></div>
-      <div class="frame-corner bl"></div><div class="frame-corner br"></div>
-      <div class="hero-deco-1">✦</div><div class="hero-deco-2">❧</div>`;
-  } else {
-    frame.innerHTML = `
-      <div class="hero-video-inner">
-        <video src="${url}" autoplay muted loop playsinline></video>
-      </div>
-      <div class="hero-img-label" id="hero-label">✦ À la une</div>
-      <div class="frame-corner tl"></div><div class="frame-corner tr"></div>
-      <div class="frame-corner bl"></div><div class="frame-corner br"></div>
-      <div class="hero-deco-1">✦</div><div class="hero-deco-2">❧</div>`;
-  }
+  const metaHtml = buildUneMeta(meta);
+  const inner = isEmbed
+    ? `<iframe src="${embedUrl}" allow="autoplay; fullscreen" allowfullscreen></iframe>`
+    : `<video src="${url}" autoplay muted loop playsinline></video>`;
+  frame.innerHTML = `
+    <div class="hero-video-inner">${inner}${metaHtml}</div>
+    <div class="hero-img-label" id="hero-label">✦ À la une</div>
+    <div class="frame-corner tl"></div><div class="frame-corner tr"></div>
+    <div class="frame-corner bl"></div><div class="frame-corner br"></div>
+    <div class="hero-deco-1">✦</div><div class="hero-deco-2">❧</div>`;
 }
 
-async function renderHeroMemory(memoryId) {
+async function renderHeroMemory(memoryId, meta={}) {
   try {
     const { data: mem } = await supabaseClient.from('memories').select('*').eq('id', memoryId).single();
     if (!mem) return;
     const frame  = document.getElementById('hero-frame');
     const imgUrl = getImageUrl(mem.image_path);
-    const date   = formatDate(mem.memory_date);
+    // Priorité : meta admin → données du souvenir
+    const title  = meta.title || mem.title;
+    const date   = meta.date  ? formatDate(meta.date) : formatDate(mem.memory_date);
+    const desc   = meta.desc  || mem.description || '';
     const safeD  = encodeURIComponent(JSON.stringify({ id: mem.id, title: mem.title, description: mem.description, image_path: mem.image_path, memory_date: mem.memory_date, _type: 'admin' }));
     frame.innerHTML = `
       <div class="hero-memory-inner" onclick="openDetail('${safeD}')">
-        <img src="${imgUrl}" alt="${esc(mem.title)}" />
+        <img src="${imgUrl}" alt="${esc(title)}" />
         <div class="hero-memory-caption">
-          <div class="hero-memory-title">${esc(mem.title)}</div>
-          ${date ? `<div class="hero-memory-date">${date}</div>` : ''}
+          <div class="hero-memory-title">${esc(title)}</div>
+          ${date   ? `<div class="hero-memory-date">${date}</div>` : ''}
+          ${desc   ? `<div class="hero-memory-desc">${esc(desc)}</div>` : ''}
         </div>
       </div>
       <div class="hero-img-label" id="hero-label">✦ À la une</div>
@@ -125,6 +118,31 @@ async function renderHeroMemory(memoryId) {
       <div class="frame-corner bl"></div><div class="frame-corner br"></div>
       <div class="hero-deco-1">✦</div><div class="hero-deco-2">❧</div>`;
   } catch (e) {}
+}
+
+function renderHeroImageMeta(meta) {
+  const frame = document.getElementById('hero-frame');
+  if (!frame || !meta.title) return;
+  const existing = frame.querySelector('.hero-memory-caption');
+  if (existing) existing.remove();
+  const inner = frame.querySelector('.hero-img-inner');
+  if (!inner) return;
+  const caption = document.createElement('div');
+  caption.className = 'hero-memory-caption';
+  caption.innerHTML = `
+    <div class="hero-memory-title">${esc(meta.title)}</div>
+    ${meta.date ? `<div class="hero-memory-date">${formatDate(meta.date)}</div>` : ''}
+    ${meta.desc ? `<div class="hero-memory-desc">${esc(meta.desc)}</div>` : ''}`;
+  inner.appendChild(caption);
+}
+
+function buildUneMeta(meta) {
+  if (!meta || !meta.title) return '';
+  return `<div class="hero-memory-caption">
+    <div class="hero-memory-title">${esc(meta.title)}</div>
+    ${meta.date ? `<div class="hero-memory-date">${formatDate(meta.date)}</div>` : ''}
+    ${meta.desc ? `<div class="hero-memory-desc">${esc(meta.desc)}</div>` : ''}
+  </div>`;
 }
 
 // ====================================
@@ -338,81 +356,224 @@ async function submitVisitorPost() {
 function showVpErr(msg) { const el = document.getElementById('vp-error'); el.textContent = msg; el.style.display = 'block'; }
 
 // ====================================
-// MESSAGES VISITEUR
+// MESSENGER — Real-time Facebook-style
 // ====================================
-function openMsgPanel() {
-  document.getElementById('msg-panel').classList.add('open');
-  document.getElementById('msg-overlay').classList.add('open');
-  document.getElementById('msg-fab').classList.add('open');
-  // Masquer le badge
-  document.getElementById('msg-fab-badge').style.display = 'none';
-  loadMyMessages();
-}
+let messengerOpen  = false;
+let myPseudo       = null;
+let realtimeSub    = null;
+let lastMsgDate    = null;
+let adminTypingTimeout = null;
 
-function closeMsgPanel() {
-  document.getElementById('msg-panel').classList.remove('open');
-  document.getElementById('msg-overlay').classList.remove('open');
-  document.getElementById('msg-fab').classList.remove('open');
-}
+function toggleMessenger() {
+  messengerOpen = !messengerOpen;
+  const win = document.getElementById('messenger-window');
+  win.classList.toggle('open', messengerOpen);
+  document.getElementById('msg-fab').style.transform = messengerOpen ? 'scale(0.9)' : '';
 
-async function checkMyMessages() {
-  try {
-    const { data } = await supabaseClient.from('messages').select('id, reply').eq('session_token', sessionToken);
-    if (!data || data.length === 0) return;
-    const withReply = data.filter(m => m.reply);
-    if (withReply.length > 0) {
-      const badge = document.getElementById('msg-fab-badge');
-      badge.textContent   = withReply.length;
-      badge.style.display = 'flex';
+  if (messengerOpen) {
+    // Masquer badge
+    const badge = document.getElementById('msg-fab-badge');
+    badge.style.display = 'none';
+    // Vérifier pseudo
+    myPseudo = localStorage.getItem('msn_pseudo');
+    if (!myPseudo) {
+      document.getElementById('msn-pseudo-prompt').classList.add('show');
+    } else {
+      initMessenger();
     }
-  } catch (e) {}
+  } else {
+    // Unsubscribe real-time quand fermé
+    if (realtimeSub) { supabaseClient.removeChannel(realtimeSub); realtimeSub = null; }
+  }
 }
 
-async function loadMyMessages() {
-  const wrap = document.getElementById('my-messages-wrap');
-  const list = document.getElementById('my-messages-list');
+function confirmPseudo() {
+  const val = document.getElementById('msn-pseudo-input').value.trim();
+  if (!val) return;
+  myPseudo = val;
+  localStorage.setItem('msn_pseudo', val);
+  document.getElementById('msn-pseudo-prompt').classList.remove('show');
+  initMessenger();
+}
+
+async function initMessenger() {
+  await loadMessages();
+  subscribeRealtime();
+  markVisitorRead();
+}
+
+// Charger tous les messages de cette session
+async function loadMessages() {
+  const container = document.getElementById('msn-messages');
   try {
-    const { data } = await supabaseClient.from('messages').select('*').eq('session_token', sessionToken).order('created_at', { ascending: false });
-    if (!data || data.length === 0) { wrap.style.display = 'none'; return; }
-    wrap.style.display = 'block';
-    list.innerHTML = data.map(m => `
-      <div class="msg-item ${m.reply ? 'has-reply' : ''}">
-        <div class="msg-item-content">${esc(m.content)}</div>
-        <div class="msg-item-time">${timeAgo(m.created_at)}</div>
-        ${m.reply ? `
-        <div class="msg-item-reply">
-          <div class="msg-item-reply-label">Réponse</div>
-          <div class="msg-item-reply-text">${esc(m.reply)}</div>
-        </div>` : '<div style="font-size:0.72rem;color:var(--warm-pale);margin-top:6px;">En attente de réponse...</div>'}
-      </div>`).join('');
-  } catch (e) {}
+    const { data } = await supabaseClient
+      .from('messages')
+      .select('*')
+      .eq('session_token', sessionToken)
+      .order('created_at', { ascending: true });
+
+    if (!data || data.length === 0) {
+      container.innerHTML = `<div class="msn-empty" id="msn-empty">
+        <div class="msn-empty-icon">💬</div>
+        <p>Envoyez un message — nous vous répondrons dès que possible ✦</p>
+      </div>`;
+      return;
+    }
+
+    lastMsgDate = null;
+    container.innerHTML = data.map(m => renderBubble(m)).join('');
+    scrollToBottom();
+  } catch (e) { console.error(e); }
 }
 
-async function sendMessage() {
-  const pseudo  = document.getElementById('msg-pseudo').value.trim();
-  const content = document.getElementById('msg-content').value.trim();
-  const btn     = document.getElementById('msg-send-btn');
-  const errEl   = document.getElementById('msg-error');
-  const succEl  = document.getElementById('msg-success');
-  errEl.style.display = succEl.style.display = 'none';
-  if (!content) { errEl.textContent = 'Veuillez écrire un message.'; errEl.style.display = 'block'; return; }
-  btn.textContent = 'Envoi...'; btn.disabled = true;
+function renderBubble(msg) {
+  const isVisitor = msg.sender === 'visitor';
+  const time      = formatMsgTime(msg.created_at);
+  const dateLabel = getMsgDate(msg.created_at);
+  let daySep = '';
+  if (dateLabel !== lastMsgDate) {
+    daySep = `<div class="msn-day-sep">${dateLabel}</div>`;
+    lastMsgDate = dateLabel;
+  }
+  const initials = isVisitor
+    ? (myPseudo || msg.pseudo || 'V')[0].toUpperCase()
+    : '🌹';
+  const avatarStyle = isVisitor ? '' : 'background:var(--rose-light);color:var(--rose-dark);font-size:0.9rem;';
+
+  return `${daySep}
+  <div class="msn-bubble-wrap ${isVisitor ? 'visitor' : 'admin'}">
+    <div class="msn-bubble-avatar" style="${avatarStyle}">${initials}</div>
+    <div>
+      <div class="msn-bubble">${escHtml(msg.content)}</div>
+      <div class="msn-bubble-time">${time}</div>
+    </div>
+  </div>`;
+}
+
+// Real-time subscription
+function subscribeRealtime() {
+  if (realtimeSub) supabaseClient.removeChannel(realtimeSub);
+
+  realtimeSub = supabaseClient
+    .channel('visitor-messages-' + sessionToken)
+    .on('postgres_changes', {
+      event: 'INSERT',
+      schema: 'public',
+      table: 'messages',
+      filter: `session_token=eq.${sessionToken}`
+    }, payload => {
+      const msg = payload.new;
+      appendBubble(msg);
+      // Si message admin → badge FAB si fermé
+      if (msg.sender === 'admin' && !messengerOpen) {
+        showFabBadge();
+      }
+      // Masquer typing
+      if (msg.sender === 'admin') hideTyping();
+      markVisitorRead();
+    })
+    .subscribe();
+}
+
+function appendBubble(msg) {
+  const container = document.getElementById('msn-messages');
+  const empty     = document.getElementById('msn-empty');
+  if (empty) empty.remove();
+  const div = document.createElement('div');
+  div.innerHTML = renderBubble(msg);
+  container.appendChild(div.firstElementChild);
+  if (div.children.length > 0) {
+    Array.from(div.children).forEach(c => container.appendChild(c));
+  }
+  scrollToBottom();
+}
+
+function scrollToBottom() {
+  const c = document.getElementById('msn-messages');
+  if (c) c.scrollTop = c.scrollHeight;
+}
+
+// Envoyer message visiteur
+async function sendVisitorMessage() {
+  const input   = document.getElementById('msn-input');
+  const content = input.value.trim();
+  if (!content || !myPseudo) return;
+
+  const btn = document.getElementById('msn-send-btn');
+  btn.disabled = true;
+  input.value  = '';
+  autoResize(input);
+
   try {
     const { error } = await supabaseClient.from('messages').insert([{
-      pseudo:        pseudo || 'Visiteur',
+      pseudo:        myPseudo,
       content,
+      sender:        'visitor',
       session_token: sessionToken,
-      read:          false
+      read_by_admin:   false,
+      read_by_visitor: true
     }]);
     if (error) throw error;
-    document.getElementById('msg-pseudo').value  = '';
-    document.getElementById('msg-content').value = '';
-    succEl.textContent   = '✦ Message envoyé ! Revenez voir la réponse ici.';
-    succEl.style.display = 'block';
-    await loadMyMessages();
-  } catch (e) { errEl.textContent = e.message || 'Erreur.'; errEl.style.display = 'block'; }
-  finally { btn.textContent = 'Envoyer'; btn.disabled = false; }
+  } catch (e) { console.error(e); input.value = content; }
+  finally { btn.disabled = false; input.focus(); }
 }
+
+function handleMsgKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendVisitorMessage(); }
+}
+
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 100) + 'px';
+}
+
+// Typing indicator (admin typing → visitor voit)
+function hideTyping() {
+  document.getElementById('msn-typing')?.classList.remove('show');
+}
+
+async function markVisitorRead() {
+  try {
+    await supabaseClient.from('messages')
+      .update({ read_by_visitor: true })
+      .eq('session_token', sessionToken)
+      .eq('sender', 'admin');
+  } catch (e) {}
+}
+
+function showFabBadge() {
+  const badge = document.getElementById('msg-fab-badge');
+  if (badge) { badge.style.display = 'flex'; badge.textContent = '!'; }
+}
+
+async function checkUnreadAdmin() {
+  try {
+    const { data } = await supabaseClient.from('messages')
+      .select('id')
+      .eq('session_token', sessionToken)
+      .eq('sender', 'admin')
+      .eq('read_by_visitor', false);
+    if (data && data.length > 0) showFabBadge();
+  } catch (e) {}
+}
+
+// Formatters
+function formatMsgTime(d) {
+  return new Date(d).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+}
+function getMsgDate(d) {
+  const date = new Date(d);
+  const today = new Date();
+  const yesterday = new Date(today); yesterday.setDate(today.getDate() - 1);
+  if (date.toDateString() === today.toDateString())     return "Aujourd'hui";
+  if (date.toDateString() === yesterday.toDateString()) return 'Hier';
+  return date.toLocaleDateString('fr-FR', { day:'numeric', month:'long' });
+}
+function escHtml(str) {
+  if (!str) return '';
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
 
 // ====================================
 // QUOTES

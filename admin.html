@@ -9,6 +9,7 @@
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ctext y='26' font-size='28'%3E🌹%3C/text%3E%3C/svg%3E" />
   <link rel="stylesheet" href="styles.css" />
   <link rel="stylesheet" href="admin-extra.css" />
+  <link rel="stylesheet" href="editor.css" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body class="admin-page">
@@ -290,6 +291,14 @@
   </div>
 
   <script src="supabase-config.js"></script>
+  <script src="editor.js"></script>
   <script src="admin.js"></script>
+  <!-- RTE Color popup (moved to body by JS) -->
+  <div class="rte-color-popup" id="rte-color-popup">
+    <div class="rte-colors" id="rte-colors-grid"></div>
+    <input type="color" class="rte-color-input" id="rte-color-custom" />
+    <button class="rte-color-clear" id="rte-color-clear">Aucune</button>
+  </div>
+
 </body>
 </html>

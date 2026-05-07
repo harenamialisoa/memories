@@ -199,7 +199,18 @@ function openDetail(encodedData) {
   currentMemoryId = mem.id;
   document.getElementById('detail-img').src           = getImageUrl(mem.image_path);
   document.getElementById('detail-title').textContent = mem.title || '';
-  document.getElementById('detail-text').textContent  = mem.description || '';
+  const detailTextEl = document.getElementById('detail-text');
+  if (detailTextEl) {
+    // Render rich HTML if it contains tags, otherwise plain text
+    const desc = mem.description || '';
+    if (desc.includes('<') && desc.includes('>')) {
+      detailTextEl.innerHTML = desc;
+      detailTextEl.className = 'detail-text detail-text-rich';
+    } else {
+      detailTextEl.textContent = desc;
+      detailTextEl.className = 'detail-text';
+    }
+  }
   document.getElementById('detail-date').textContent  = formatDate(mem.memory_date) || '';
   ['❤️','😢','😮','😂','👏','🌹'].forEach(e => {
     const c = document.getElementById('r-' + e);

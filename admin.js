@@ -101,7 +101,7 @@ function previewFile(event) {
 async function uploadMemory() {
   const file = document.getElementById('file-input').files[0];
   const title = document.getElementById('mem-title').value.trim();
-  const description = document.getElementById('mem-text').value.trim();
+  const description = RTE.get('mem-text')?.getValue() || document.getElementById('mem-text')?.value.trim() || '';
   const memory_date = document.getElementById('mem-date').value;
   const btn   = document.getElementById('upload-btn');
   const errEl = document.getElementById('upload-error');
@@ -116,7 +116,8 @@ async function uploadMemory() {
     const { error: dErr } = await supabaseClient.from('memories').insert([{ title, description, image_path: fn, memory_date: memory_date||null }]);
     if (dErr) throw dErr;
     closeModal('upload-modal');
-    ['file-input','mem-title','mem-text','mem-date'].forEach(id => { document.getElementById(id).value=''; });
+    ['file-input','mem-title','mem-date'].forEach(id => { document.getElementById(id).value=''; });
+    RTE.get('mem-text')?.clear();
     document.getElementById('preview-img').style.display = 'none';
     document.getElementById('upload-placeholder').style.display = 'block';
     await loadAdminMemories(); await loadAdminStats();
@@ -128,15 +129,18 @@ function openEditModal(enc) {
   const mem = JSON.parse(decodeURIComponent(enc));
   document.getElementById('edit-id').value    = mem.id;
   document.getElementById('edit-title').value = mem.title||'';
-  document.getElementById('edit-text').value  = mem.description||'';
   document.getElementById('edit-date').value  = mem.memory_date||'';
+  // Set rich editor value
+  const rteEdit = RTE.get('edit-text');
+  if (rteEdit) rteEdit.setValue(mem.description||'');
+  else { const el=document.getElementById('edit-text'); if(el) el.value=mem.description||''; }
   openModal('edit-modal');
 }
 
 async function saveEdit() {
   const id = document.getElementById('edit-id').value;
   const title = document.getElementById('edit-title').value.trim();
-  const description = document.getElementById('edit-text').value.trim();
+  const description = RTE.get('edit-text')?.getValue() || document.getElementById('edit-text')?.value.trim() || '';
   const memory_date = document.getElementById('edit-date').value;
   if (!title) { alert('Titre requis.'); return; }
   const { error } = await supabaseClient.from('memories').update({ title, description, memory_date: memory_date||null }).eq('id', id);
@@ -551,7 +555,7 @@ function uneNewPreview(event) {
 async function saveNewUneMemory() {
   const file  = document.getElementById('une-new-file').files[0];
   const title = document.getElementById('une-new-title').value.trim();
-  const desc  = document.getElementById('une-new-desc').value.trim();
+  const desc  = RTE.get('une-new-desc')?.getValue() || document.getElementById('une-new-desc')?.value.trim() || '';
   const date  = document.getElementById('une-new-date').value;
   const btn   = document.getElementById('une-new-btn');
   const errEl = document.getElementById('une-new-error');
@@ -590,7 +594,7 @@ async function saveNewUneMemory() {
     // Reset form
     document.getElementById('une-new-file').value  = '';
     document.getElementById('une-new-title').value = '';
-    document.getElementById('une-new-desc').value  = '';
+    RTE.get('une-new-desc')?.clear();
     document.getElementById('une-new-date').value  = '';
     document.getElementById('une-new-preview').style.display    = 'none';
     document.getElementById('une-new-placeholder').style.display = 'block';

@@ -2518,3 +2518,147 @@ body::before {
   background: linear-gradient(to top, rgba(26,18,16,0.85), transparent);
   pointer-events: none;
 }
+
+/* ============================================
+   MESSENGER AUTH — Login / Register
+   ============================================ */
+
+/* Back button */
+.msn-back-btn {
+  background: none; border: none;
+  color: rgba(255,255,255,0.8); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  width: 28px; height: 28px; border-radius: 50%;
+  transition: background 0.2s;
+  flex-shrink: 0;
+}
+.msn-back-btn:hover { background: rgba(255,255,255,0.15); }
+
+/* Logged-in indicator */
+.msn-logged-in {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 0.72rem; color: rgba(255,255,255,0.85);
+}
+
+/* Login link in header */
+.msn-login-link {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: rgba(255,255,255,0.15);
+  border: 1px solid rgba(255,255,255,0.25);
+  color: rgba(255,255,255,0.9);
+  font-family: var(--font-sans);
+  font-size: 0.7rem; font-weight: 500;
+  padding: 4px 10px; border-radius: 50px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.msn-login-link:hover { background: rgba(255,255,255,0.25); }
+
+/* Auth view container */
+#msn-auth-view { padding: 0; background: #f8f4f0; }
+
+.msn-auth-inner {
+  padding: 16px;
+  display: flex; flex-direction: column; gap: 10px;
+}
+
+/* Tabs login/register */
+.msn-auth-tabs {
+  display: flex; gap: 0;
+  background: var(--white);
+  border-radius: 8px; overflow: hidden;
+  border: 1px solid rgba(201,132,122,0.18);
+  margin-bottom: 4px;
+}
+.msn-auth-tab {
+  flex: 1; padding: 9px;
+  background: transparent; border: none;
+  font-family: var(--font-sans);
+  font-size: 0.78rem; font-weight: 500;
+  color: var(--warm-muted); cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+.msn-auth-tab.active {
+  background: var(--rose); color: white;
+}
+
+.msn-auth-hint {
+  font-size: 0.78rem; color: var(--warm-muted);
+  text-align: center; line-height: 1.4;
+  font-style: italic;
+}
+
+.msn-auth-field {
+  display: flex; flex-direction: column; gap: 4px;
+}
+.msn-auth-field label {
+  font-size: 0.68rem; font-weight: 600;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--warm-muted);
+}
+.msn-auth-field input {
+  padding: 9px 12px;
+  border: 1px solid rgba(201,132,122,0.22);
+  border-radius: 6px;
+  font-family: var(--font-sans); font-size: 0.85rem;
+  color: var(--warm-dark); background: var(--white);
+  outline: none; transition: border-color 0.2s;
+}
+.msn-auth-field input:focus { border-color: var(--rose); }
+
+.msn-auth-error {
+  background: #fff0ee;
+  border: 1px solid rgba(201,132,122,0.3);
+  color: var(--rose-dark);
+  padding: 8px 10px; border-radius: 6px;
+  font-size: 0.78rem;
+}
+.msn-auth-success {
+  background: #f0faf5;
+  border: 1px solid rgba(29,158,117,0.25);
+  color: #0f6e56;
+  padding: 8px 10px; border-radius: 6px;
+  font-size: 0.78rem;
+}
+
+.msn-auth-btn {
+  padding: 10px;
+  background: var(--rose); color: white; border: none;
+  border-radius: 8px; font-family: var(--font-sans);
+  font-size: 0.85rem; font-weight: 600;
+  cursor: pointer; transition: background 0.2s;
+}
+.msn-auth-btn:hover { background: var(--rose-dark); }
+.msn-auth-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.msn-auth-forgot {
+  background: none; border: none;
+  color: var(--warm-muted); font-family: var(--font-sans);
+  font-size: 0.75rem; cursor: pointer; text-align: center;
+  text-decoration: underline; padding: 0;
+  transition: color 0.2s;
+}
+.msn-auth-forgot:hover { color: var(--rose); }
+
+.msn-auth-sep {
+  text-align: center; font-size: 0.72rem;
+  color: var(--warm-pale); letter-spacing: 0.04em;
+  padding: 2px 0;
+}
+
+.msn-anon-btn {
+  padding: 9px;
+  background: transparent;
+  border: 1px solid rgba(201,132,122,0.25);
+  border-radius: 8px; font-family: var(--font-sans);
+  font-size: 0.82rem; color: var(--warm-muted);
+  cursor: pointer; transition: all 0.2s;
+}
+.msn-anon-btn:hover {
+  border-color: var(--rose); color: var(--rose);
+  background: var(--rose-light);
+}
+
+/* Messenger window height when auth view open */
+.messenger-window { display: flex; flex-direction: column; }
+#msn-chat-view { flex: 1; display: flex; flex-direction: column; min-height: 0; overflow: hidden; }

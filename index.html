@@ -27,59 +27,54 @@
 
   <!-- MESSENGER WINDOW -->
   <div class="messenger-window" id="messenger-window">
+
     <!-- Header -->
     <div class="msn-header">
-      <div class="msn-avatar">
-        🌹
-        <div class="msn-online-dot"></div>
-      </div>
+      <div class="msn-avatar">🌹<div class="msn-online-dot"></div></div>
       <div class="msn-info">
         <div class="msn-name" id="msn-name-header">Find me in the river</div>
-        <div class="msn-status">
+        <div class="msn-status" id="msn-user-info">
           <span style="width:6px;height:6px;background:#40c057;border-radius:50%;display:inline-block;"></span>
           En ligne
         </div>
       </div>
+      <button class="msn-back-btn" id="msn-back-btn" onclick="showMsnView('chat')" style="display:none" title="Retour">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
       <button class="msn-close" onclick="toggleMessenger()">×</button>
     </div>
 
-    <!-- Pseudo prompt (first time) -->
-    <div class="msn-pseudo-prompt" id="msn-pseudo-prompt">
-      <p>Comment souhaitez-vous vous appeler ?</p>
-      <div class="msn-pseudo-row">
-        <input type="text" class="msn-pseudo-input" id="msn-pseudo-input" placeholder="Votre prénom..." maxlength="30" />
-        <button class="msn-pseudo-confirm" onclick="confirmPseudo()">OK</button>
+    <!-- CHAT VIEW -->
+    <div id="msn-chat-view" style="display:flex;flex-direction:column;flex:1;min-height:0;">
+      <!-- Messages -->
+      <div class="msn-messages" id="msn-messages">
+        <div class="msn-empty" id="msn-empty">
+          <div class="msn-empty-icon">💬</div>
+          <p>Envoyez un message — nous vous répondrons dès que possible ✦</p>
+        </div>
+      </div>
+      <!-- Typing -->
+      <div class="msn-typing" id="msn-typing">
+        <div class="msn-bubble-avatar" style="background:var(--rose-light);color:var(--rose-dark);">🌹</div>
+        <div class="msn-typing-bubble">
+          <div class="msn-typing-dot"></div><div class="msn-typing-dot"></div><div class="msn-typing-dot"></div>
+        </div>
+      </div>
+      <!-- Input bar -->
+      <div class="msn-input-bar">
+        <div class="msn-input-wrap">
+          <textarea class="msn-input" id="msn-input" placeholder="Aa" rows="1"
+            onkeydown="handleMsgKey(event)" oninput="autoResize(this)"></textarea>
+        </div>
+        <button class="msn-send-btn" id="msn-send-btn" onclick="sendVisitorMessage()">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+        </button>
       </div>
     </div>
 
-    <!-- Messages -->
-    <div class="msn-messages" id="msn-messages">
-      <div class="msn-empty" id="msn-empty">
-        <div class="msn-empty-icon">💬</div>
-        <p>Envoyez un message — nous vous répondrons dès que possible ✦</p>
-      </div>
-    </div>
+    <!-- AUTH VIEW (login / register) -->
+    <div id="msn-auth-view" style="display:none;flex-direction:column;flex:1;overflow-y:auto;"></div>
 
-    <!-- Typing -->
-    <div class="msn-typing" id="msn-typing">
-      <div class="msn-bubble-avatar" style="background:var(--rose-light);color:var(--rose-dark);">🌹</div>
-      <div class="msn-typing-bubble">
-        <div class="msn-typing-dot"></div>
-        <div class="msn-typing-dot"></div>
-        <div class="msn-typing-dot"></div>
-      </div>
-    </div>
-
-    <!-- Input -->
-    <div class="msn-input-bar">
-      <div class="msn-input-wrap">
-        <textarea class="msn-input" id="msn-input" placeholder="Aa" rows="1"
-          onkeydown="handleMsgKey(event)" oninput="autoResize(this)"></textarea>
-      </div>
-      <button class="msn-send-btn" id="msn-send-btn" onclick="sendVisitorMessage()">
-        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
-      </button>
-    </div>
   </div>
 
 

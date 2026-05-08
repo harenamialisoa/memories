@@ -369,11 +369,30 @@ function showVpErr(msg) { const el = document.getElementById('vp-error'); el.tex
 // ====================================
 // MESSENGER — Real-time Facebook-style
 // ====================================
-let messengerOpen  = false;
-let myPseudo       = null;
-let realtimeSub    = null;
-let lastMsgDate    = null;
-let adminTypingTimeout = null;
+let messengerOpen    = false;
+let myPseudo         = null;
+let realtimeSub      = null;
+let lastMsgDate      = null;
+let visitorUser      = null; // Supabase Auth user (si connecté)
+let messengerView    = 'chat'; // 'chat' | 'login' | 'register'
+
+// ---- Init auth state ----
+supabaseClient.auth.getSession().then(({ data }) => {
+  if (data.session?.user) {
+    visitorUser = data.session.user;
+    myPseudo = visitorUser.user_metadata?.pseudo || visitorUser.email?.split('@')[0] || 'Visiteur';
+  }
+});
+supabaseClient.auth.onAuthStateChange((event, session) => {
+  if (session?.user) {
+    visitorUser = session.user;
+    myPseudo = visitorUser.user_metadata?.pseudo || visitorUser.email?.split('@')[0] || 'Visiteur';
+    // Si le panel est ouvert, mettre à jour
+    if (messengerOpen) { showMsnView('chat'); initMessenger(); }
+  } else {
+    visitorUser = null;
+  }
+});
 
 function toggleMessenger() {
   messengerOpen = !messengerOpen;
@@ -382,46 +401,175 @@ function toggleMessenger() {
   document.getElementById('msg-fab').style.transform = messengerOpen ? 'scale(0.9)' : '';
 
   if (messengerOpen) {
-    // Masquer badge
     const badge = document.getElementById('msg-fab-badge');
-    badge.style.display = 'none';
-    // Vérifier pseudo
-    myPseudo = localStorage.getItem('msn_pseudo');
-    if (!myPseudo) {
-      document.getElementById('msn-pseudo-prompt').classList.add('show');
-    } else {
-      initMessenger();
-    }
+    if (badge) badge.style.display = 'none';
+    // Toujours afficher le chat en premier
+    showMsnView('chat');
+    // Charger pseudo depuis localStorage si pas connecté
+    if (!visitorUser) myPseudo = localStorage.getItem('msn_pseudo');
+    initMessenger();
   } else {
-    // Unsubscribe real-time quand fermé
     if (realtimeSub) { supabaseClient.removeChannel(realtimeSub); realtimeSub = null; }
   }
 }
 
-function confirmPseudo() {
-  const val = document.getElementById('msn-pseudo-input').value.trim();
-  if (!val) return;
-  myPseudo = val;
-  localStorage.setItem('msn_pseudo', val);
-  document.getElementById('msn-pseudo-prompt').classList.remove('show');
+function showMsnView(view) {
+  messengerView = view;
+  const chatEl   = document.getElementById('msn-chat-view');
+  const authEl   = document.getElementById('msn-auth-view');
+  const backBtn  = document.getElementById('msn-back-btn');
+  if (chatEl)  chatEl.style.display  = view === 'chat' ? 'flex' : 'none';
+  if (authEl)  authEl.style.display  = view !== 'chat' ? 'flex' : 'none';
+  if (backBtn) backBtn.style.display = view !== 'chat' ? 'flex' : 'none';
+  if (view !== 'chat') renderAuthView(view);
+}
+
+function renderAuthView(view) {
+  const el = document.getElementById('msn-auth-view');
+  if (!el) return;
+  const isLogin = view === 'login';
+  el.innerHTML = `
+    <div class="msn-auth-inner">
+      <div class="msn-auth-tabs">
+        <button class="msn-auth-tab ${isLogin?'active':''}" onclick="showMsnView('login')">Connexion</button>
+        <button class="msn-auth-tab ${!isLogin?'active':''}" onclick="showMsnView('register')">Créer un compte</button>
+      </div>
+      <p class="msn-auth-hint">
+        ${isLogin
+          ? 'Connectez-vous pour retrouver vos messages'
+          : 'Créez un compte pour garder votre historique'}
+      </p>
+      ${!isLogin ? `<div class="msn-auth-field">
+        <label>Prénom / Pseudo</label>
+        <input type="text" id="msn-reg-pseudo" placeholder="Marie..." maxlength="30" />
+      </div>` : ''}
+      <div class="msn-auth-field">
+        <label>Email</label>
+        <input type="email" id="msn-auth-email" placeholder="votre@email.com" />
+      </div>
+      <div class="msn-auth-field">
+        <label>Mot de passe</label>
+        <input type="password" id="msn-auth-password" placeholder="••••••••" />
+      </div>
+      <div id="msn-auth-error" class="msn-auth-error" style="display:none"></div>
+      <div id="msn-auth-success" class="msn-auth-success" style="display:none"></div>
+      <button class="msn-auth-btn" id="msn-auth-submit" onclick="submitAuth('${view}')">
+        ${isLogin ? 'Se connecter' : 'Créer le compte'}
+      </button>
+      ${isLogin ? `<button class="msn-auth-forgot" onclick="forgotPassword()">Mot de passe oublié ?</button>` : ''}
+      <div class="msn-auth-sep">— ou continuer sans compte —</div>
+      <button class="msn-anon-btn" onclick="continueAnon()">Envoyer sans compte</button>
+    </div>`;
+}
+
+async function submitAuth(view) {
+  const email    = document.getElementById('msn-auth-email')?.value.trim();
+  const password = document.getElementById('msn-auth-password')?.value;
+  const pseudo   = document.getElementById('msn-reg-pseudo')?.value.trim();
+  const errEl    = document.getElementById('msn-auth-error');
+  const sucEl    = document.getElementById('msn-auth-success');
+  const btn      = document.getElementById('msn-auth-submit');
+
+  if (!email || !password) { showMsnErr('Remplissez tous les champs.'); return; }
+  btn.textContent = '...'; btn.disabled = true;
+  errEl.style.display = sucEl.style.display = 'none';
+
+  try {
+    if (view === 'login') {
+      const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+      // Auth state change handler will update visitorUser
+    } else {
+      const { error } = await supabaseClient.auth.signUp({
+        email, password,
+        options: { data: { pseudo: pseudo || email.split('@')[0] } }
+      });
+      if (error) throw error;
+      sucEl.textContent = '✦ Compte créé ! Vérifiez votre email pour confirmer.';
+      sucEl.style.display = 'block';
+      btn.textContent = view === 'login' ? 'Se connecter' : 'Créer le compte';
+      btn.disabled = false;
+      return;
+    }
+    showMsnView('chat');
+    await initMessenger();
+  } catch (e) {
+    showMsnErr(e.message || 'Erreur.');
+    btn.textContent = view === 'login' ? 'Se connecter' : 'Créer le compte';
+    btn.disabled = false;
+  }
+}
+
+async function forgotPassword() {
+  const email = document.getElementById('msn-auth-email')?.value.trim();
+  if (!email) { showMsnErr('Entrez votre email d'abord.'); return; }
+  await supabaseClient.auth.resetPasswordForEmail(email);
+  document.getElementById('msn-auth-success').textContent = 'Email de réinitialisation envoyé !';
+  document.getElementById('msn-auth-success').style.display = 'block';
+}
+
+function showMsnErr(msg) {
+  const el = document.getElementById('msn-auth-error');
+  if (el) { el.textContent = msg; el.style.display = 'block'; }
+}
+
+function continueAnon() {
+  // Sans compte — demander pseudo simple
+  if (!myPseudo) {
+    const p = prompt('Votre prénom (pour l'affichage) :');
+    if (p) { myPseudo = p; localStorage.setItem('msn_pseudo', p); }
+    else myPseudo = 'Visiteur';
+  }
+  showMsnView('chat');
   initMessenger();
 }
 
+async function visitorLogout() {
+  await supabaseClient.auth.signOut();
+  visitorUser = null;
+  myPseudo    = localStorage.getItem('msn_pseudo');
+  updateMsnHeader();
+  await loadMessages();
+}
+
 async function initMessenger() {
+  updateMsnHeader();
   await loadMessages();
   subscribeRealtime();
   markVisitorRead();
 }
 
-// Charger tous les messages de cette session
+function updateMsnHeader() {
+  const userInfo = document.getElementById('msn-user-info');
+  if (!userInfo) return;
+  if (visitorUser) {
+    userInfo.innerHTML = `
+      <span class="msn-logged-in">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="#40c057"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        ${esc(myPseudo)}
+        <button onclick="visitorLogout()" title="Déconnexion" style="background:none;border:none;cursor:pointer;color:rgba(255,255,255,0.6);font-size:0.7rem;padding:0 0 0 4px;">✕</button>
+      </span>`;
+  } else {
+    userInfo.innerHTML = `
+      <button class="msn-login-link" onclick="showMsnView('login')">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        Se connecter
+      </button>`;
+  }
+}
+
+// Charger tous les messages (par user_id si connecté, sinon par session_token)
 async function loadMessages() {
   const container = document.getElementById('msn-messages');
+  if (!container) return;
   try {
-    const { data } = await supabaseClient
-      .from('messages')
-      .select('*')
-      .eq('session_token', sessionToken)
-      .order('created_at', { ascending: true });
+    let query = supabaseClient.from('messages').select('*').order('created_at', { ascending: true });
+    if (visitorUser) {
+      query = query.eq('visitor_user_id', visitorUser.id);
+    } else {
+      query = query.eq('session_token', sessionToken);
+    }
+    const { data } = await query;
 
     if (!data || data.length === 0) {
       container.innerHTML = `<div class="msn-empty" id="msn-empty">
@@ -465,21 +613,22 @@ function renderBubble(msg) {
 function subscribeRealtime() {
   if (realtimeSub) supabaseClient.removeChannel(realtimeSub);
 
+  const chanKey  = visitorUser ? visitorUser.id : sessionToken;
+  const filterStr = visitorUser
+    ? `visitor_user_id=eq.${visitorUser.id}`
+    : `session_token=eq.${sessionToken}`;
+
   realtimeSub = supabaseClient
-    .channel('visitor-messages-' + sessionToken)
+    .channel('visitor-messages-' + chanKey)
     .on('postgres_changes', {
       event: 'INSERT',
       schema: 'public',
       table: 'messages',
-      filter: `session_token=eq.${sessionToken}`
+      filter: filterStr
     }, payload => {
       const msg = payload.new;
       appendBubble(msg);
-      // Si message admin → badge FAB si fermé
-      if (msg.sender === 'admin' && !messengerOpen) {
-        showFabBadge();
-      }
-      // Masquer typing
+      if (msg.sender === 'admin' && !messengerOpen) showFabBadge();
       if (msg.sender === 'admin') hideTyping();
       markVisitorRead();
     })
@@ -516,14 +665,16 @@ async function sendVisitorMessage() {
   autoResize(input);
 
   try {
-    const { error } = await supabaseClient.from('messages').insert([{
-      pseudo:        myPseudo,
+    const payload = {
+      pseudo:          myPseudo || 'Visiteur',
       content,
-      sender:        'visitor',
-      session_token: sessionToken,
+      sender:          'visitor',
+      session_token:   sessionToken,
       read_by_admin:   false,
       read_by_visitor: true
-    }]);
+    };
+    if (visitorUser) payload.visitor_user_id = visitorUser.id;
+    const { error } = await supabaseClient.from('messages').insert([payload]);
     if (error) throw error;
   } catch (e) { console.error(e); input.value = content; }
   finally { btn.disabled = false; input.focus(); }
@@ -545,10 +696,10 @@ function hideTyping() {
 
 async function markVisitorRead() {
   try {
-    await supabaseClient.from('messages')
-      .update({ read_by_visitor: true })
-      .eq('session_token', sessionToken)
-      .eq('sender', 'admin');
+    let q = supabaseClient.from('messages').update({ read_by_visitor: true }).eq('sender', 'admin');
+    if (visitorUser) q = q.eq('visitor_user_id', visitorUser.id);
+    else q = q.eq('session_token', sessionToken);
+    await q;
   } catch (e) {}
 }
 
@@ -559,11 +710,10 @@ function showFabBadge() {
 
 async function checkUnreadAdmin() {
   try {
-    const { data } = await supabaseClient.from('messages')
-      .select('id')
-      .eq('session_token', sessionToken)
-      .eq('sender', 'admin')
-      .eq('read_by_visitor', false);
+    let q = supabaseClient.from('messages').select('id').eq('sender', 'admin').eq('read_by_visitor', false);
+    if (visitorUser) q = q.eq('visitor_user_id', visitorUser.id);
+    else q = q.eq('session_token', sessionToken);
+    const { data } = await q;
     if (data && data.length > 0) showFabBadge();
   } catch (e) {}
 }

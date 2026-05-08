@@ -12,6 +12,7 @@ let sessionToken  = null;
 document.addEventListener('DOMContentLoaded', async () => {
   visitorToken  = getOrCreate('sv_token',   'v_');
   sessionToken  = getOrCreate('sv_session', 's_');
+  initVisitorAuth();
   initPageTransition();
   initCursor();
   initPetals();
@@ -376,23 +377,24 @@ let lastMsgDate      = null;
 let visitorUser      = null; // Supabase Auth user (si connecté)
 let messengerView    = 'chat'; // 'chat' | 'login' | 'register'
 
-// ---- Init auth state ----
-supabaseClient.auth.getSession().then(({ data }) => {
-  if (data.session?.user) {
-    visitorUser = data.session.user;
-    myPseudo = visitorUser.user_metadata?.pseudo || visitorUser.email?.split('@')[0] || 'Visiteur';
-  }
-});
-supabaseClient.auth.onAuthStateChange((event, session) => {
-  if (session?.user) {
-    visitorUser = session.user;
-    myPseudo = visitorUser.user_metadata?.pseudo || visitorUser.email?.split('@')[0] || 'Visiteur';
-    // Si le panel est ouvert, mettre à jour
-    if (messengerOpen) { showMsnView('chat'); initMessenger(); }
-  } else {
-    visitorUser = null;
-  }
-});
+// ---- Init auth state (called inside DOMContentLoaded) ----
+function initVisitorAuth() {
+  supabaseClient.auth.getSession().then(({ data }) => {
+    if (data.session?.user) {
+      visitorUser = data.session.user;
+      myPseudo = visitorUser.user_metadata?.pseudo || visitorUser.email?.split('@')[0] || 'Visiteur';
+    }
+  });
+  supabaseClient.auth.onAuthStateChange((event, session) => {
+    if (session?.user) {
+      visitorUser = session.user;
+      myPseudo = visitorUser.user_metadata?.pseudo || visitorUser.email?.split('@')[0] || 'Visiteur';
+      if (messengerOpen) { showMsnView('chat'); initMessenger(); }
+    } else {
+      visitorUser = null;
+    }
+  });
+}
 
 function toggleMessenger() {
   messengerOpen = !messengerOpen;
@@ -502,7 +504,7 @@ async function submitAuth(view) {
 
 async function forgotPassword() {
   const email = document.getElementById('msn-auth-email')?.value.trim();
-  if (!email) { showMsnErr('Entrez votre email d'abord.'); return; }
+  if (!email) { showMsnErr("Entrez votre email d'abord."); return; }
   await supabaseClient.auth.resetPasswordForEmail(email);
   document.getElementById('msn-auth-success').textContent = 'Email de réinitialisation envoyé !';
   document.getElementById('msn-auth-success').style.display = 'block';
@@ -516,7 +518,7 @@ function showMsnErr(msg) {
 function continueAnon() {
   // Sans compte — demander pseudo simple
   if (!myPseudo) {
-    const p = prompt('Votre prénom (pour l'affichage) :');
+    const p = prompt("Votre prénom (pour l'affichage) :");
     if (p) { myPseudo = p; localStorage.setItem('msn_pseudo', p); }
     else myPseudo = 'Visiteur';
   }
